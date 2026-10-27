@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta name="app-version" content="26.10.27-1">
+<meta name="app-version" content="26.10.27-2">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cek Foto Bukti · Team C</title>
@@ -110,7 +110,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
    <div class="row"><div id="packs" class="muted"></div><span style="flex:1"></span><button id="expAll">⬇ Simpan .tefoto</button><label class="btn">⬆ Muat .tefoto…<input type="file" id="impIn" accept=".tefoto" multiple hidden></label></div>
    <div class="muted" id="impSt"></div></section>
  </main>
- <div class="foot">Cek Foto Bukti · Team C · semua proses berjalan di laptop ini · v26.10.27-1</div>
+ <div class="foot">Cek Foto Bukti · Team C · semua proses berjalan di laptop ini · v26.10.27-2</div>
 </div>
 <script>/*@A:fflate-c3b34f2e9f5e.txt@*/</script>
 <script>/*@A:tess-a8e29918d098.txt@*/</script>
@@ -382,6 +382,7 @@ const MN=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des
 const num=n=>Number(n).toLocaleString("id-ID");
 let PW=null,D=null,PEOPLE=DEF_PEOPLE.slice();
 const KN=new Map();           /* hash -> tx facts, for photos already read and stored in a pack */
+const HLM=new Map();          /* sid|hash -> [box in crop, box in full photo, matched text] */
 let PACKS=[];                 /* metas of packs in this browser */
 const FILES=[];               /* {file,u8,ss,sheets:[{name,path,...}]} */
 let SHEETS=[];                /* candidate sheets */
@@ -413,11 +414,11 @@ async function unlock(ev){ev.preventDefault();const pw=$("#pw").value,err=$("#lo
  err.textContent="Memuat foto yang sudah pernah dibaca…";await loadKnown(recs);
  $("#lock").hidden=true;$("#main").hidden=false;renderPacks();renderSheets();
  const wh=$("#who");wh.classList.toggle("off",!D);wh.innerHTML=D?`<i></i>Terhubung dengan dashboard Team C di Chrome ini (${PEOPLE.length} sales). Hasil akan masuk otomatis.`:`<i></i>Belum terhubung dengan tab Kontak dashboard Team C di Chrome ini. Hasil tetap tersimpan di sini dan bisa dijadikan Excel atau cadangan .tefoto.`;}
-async function loadKnown(recs){KN.clear();PACKS=[];PREV.clear();HIDX.clear();const heads=[];for(const r of recs){const u8=new Uint8Array(r.bytes),meta=r.meta||FT.meta(u8);PACKS.push({id:r.id,meta,size:u8.length,at:r.at});
+async function loadKnown(recs){KN.clear();HLM.clear();PACKS=[];PREV.clear();HIDX.clear();const heads=[];for(const r of recs){const u8=new Uint8Array(r.bytes),meta=r.meta||FT.meta(u8);PACKS.push({id:r.id,meta,size:u8.length,at:r.at});
   try{const o=await FT.open(u8,PW),txm=o.head.tx||{};Object.keys(o.head.img||{}).forEach(h=>{if(txm[h])KN.set(h,txm[h]);if(!HIDX.has(h))HIDX.set(h,r.id);});heads.push([meta.made||0,o.head]);}catch(e){}}
  PACKS.sort((a,b)=>(a.meta.made||0)-(b.meta.made||0));
  heads.sort((a,b)=>a[0]-b[0]).forEach(([made,h])=>(h.sheets||[]).forEach(sx=>{const key=sx.pn+"|"+sx.ym;let e=PREV.get(key);if(!e)PREV.set(key,e={ph:new Map(),fl:new Map(),nm:new Map(),tm:new Map(),at:0,flAt:0});
-  (sx.rows||[]).forEach(r=>{e.ph.set(r[0],[r[1],sx.at||made]);});e.at=Math.max(e.at,sx.at||made);if(sx.data&&sx.data.recs){sx.data.recs.forEach(x=>{e.fl.set(x[0],[x[3],sx.at||made]);if(x[1])e.nm.set(x[0],x[1]);if(sx.data.tmCol)e.tm.set(x[0],[x[4]||"",sx.at||made]);});e.flAt=Math.max(e.flAt,sx.at||made);}}));}
+  (sx.rows||[]).forEach(r=>{e.ph.set(r[0],[r[1],sx.at||made]);if(r[6]||r[9])HLM.set(r[0]+"|"+r[1],[r[6]||null,r[9]||null,r[10]||""]);});e.at=Math.max(e.at,sx.at||made);if(sx.data&&sx.data.recs){sx.data.recs.forEach(x=>{e.fl.set(x[0],[x[3],sx.at||made]);if(x[1])e.nm.set(x[0],x[1]);if(sx.data.tmCol)e.tm.set(x[0],[x[4]||"",sx.at||made]);});e.flAt=Math.max(e.flAt,sx.at||made);}}));}
 /* ---------- photos that look like another customer's proof (the same screenshot cropped or taken again) ----------
    Compared by the customer-specific words and numbers read in the photo (words common to every screenshot are ignored). */
 /* ---------- what changed since the last reading of the same sales and month ---------- */
@@ -628,23 +629,27 @@ async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.n
       if(!PDOFF&&miss(tx,m)){
        try{if(!PD.ok)st.textContent="Menyiapkan pembaca kedua (PaddleOCR)…";const w2=await pdRead(o.bm,o.W,o.H);words=words.concat(w2);tx=FT.txOf(words);RUN.pd=(RUN.pd||0)+1;}catch(e){PDOFF=true;RUN.pdErr=String(e&&e.message||e);}}}
       const cr=await makeCrop(o.bm,o.W,o.H,words,sid,r&&r.p9);o.bm.close&&o.bm.close();
-      out={h:x.h,sd:o.sd,tx,cu8:cr.u8,words,box:cr.box};chunk.imgs.push({h:x.h,u8:cr.u8,w:cr.w,ht:cr.ht,k:cr.k});chunk.tx[x.h]=tx;KN.set(x.h,tx);}catch(e){err++;}
+      out={h:x.h,sd:o.sd,tx,cu8:cr.u8,words,box:cr.box,W:o.W,H:o.H};chunk.imgs.push({h:x.h,u8:cr.u8,w:cr.w,ht:cr.ht,k:cr.k});chunk.tx[x.h]=tx;KN.set(x.h,tx);}catch(e){err++;}
      if(out)done.set(m,out);RUN.done++;inflight--;
      /* rows of this photo */
-     if(out)bySid.forEach((mm,sd_)=>{if(mm!==m)return;const rr=s.recs.get(sd_),[code,oth,ev,tok]=FT.codeOf(out.tx,sd_,rr.p9,rr.name,allSids,p9map),hl=code===1||code===4?FT.hlBox(out.words,tok,ev,out.box):null,[dc,dd]=FT.dateCheck(out.tx,rr.tm);chunk.rows.push([sd_,out.h,out.sd,code,oth,ev,hl,dc,dd]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sd_,rr,out.h,ym,out.cu8);if(code===4){if(!CROPU.has(out.h))CROPU.set(out.h,URL.createObjectURL(new Blob([out.cu8],{type:"image/webp"})));sum.flag.push([sd_,rr.name,code,out.h,oth]);}});
+     if(out)bySid.forEach((mm,sd_)=>{if(mm!==m)return;const rr=s.recs.get(sd_),[code,oth,ev,tok]=FT.codeOf(out.tx,sd_,rr.p9,rr.name,allSids,p9map),hl=code===1||code===4?FT.hlBox(out.words,tok,ev,out.box):null,hlF=code===1||code===4?FT.hlBox(out.words,tok,ev,[0,0,out.W,out.H]):null,[dc,dd]=FT.dateCheck(out.tx,rr.tm);chunk.rows.push([sd_,out.h,out.sd,code,oth,ev,hl,dc,dd,hlF,tok||""]);if(hl||hlF)HLM.set(sd_+"|"+out.h,[hl,hlF,tok||""]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sd_,rr,out.h,ym,out.cu8);if(code===4){if(!CROPU.has(out.h))CROPU.set(out.h,URL.createObjectURL(new Blob([out.cu8],{type:"image/webp"})));sum.flag.push([sd_,rr.name,code,out.h,oth,hl]);}});
      const pc=RUN.total?RUN.done/RUN.total*100:100;$("#bar").style.width=pc.toFixed(1)+"%";$("#pgN").textContent=`${num(RUN.done)} / ${num(RUN.total)} foto`;$("#pgEta").textContent=RUN.paused?"dijeda":eta();st.textContent=`Sedang membaca: ${pn} · ${ml(ym)}${RUN.pd?` · ${num(RUN.pd)} foto dibaca ulang dengan pembaca kedua`:""}${err?` · ${err} foto gagal dibaca`:""}${PDOFF?" · pembaca kedua tidak bisa dipakai di browser ini":""}`;
      if(chunk.imgs.length>=120)await flush(false);
      if(qi>=queue.length&&!inflight)resolve();else next();})();}
    if(RUN.paused&&!inflight){waitPause().then(next);}
    if(qi>=queue.length&&!inflight)resolve();};next();});
  /* rows whose photo was already known */
- bySid.forEach((m,sid)=>{const o=done.get(m);if(!o||!o.known)return;const rr=s.recs.get(sid),[code,oth,ev]=FT.codeOf(o.tx,sid,rr.p9,rr.name,allSids,p9map),[dc,dd]=FT.dateCheck(o.tx,rr.tm);chunk.rows.push([sid,o.h,null,code,oth,ev,null,dc,dd]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sid,rr,o.h,ym,null);if(code===4)sum.flag.push([sid,rr.name,code,o.h,oth]);});
+ bySid.forEach((m,sid)=>{const o=done.get(m);if(!o||!o.known)return;const rr=s.recs.get(sid),[code,oth,ev,tok]=FT.codeOf(o.tx,sid,rr.p9,rr.name,allSids,p9map),[dc,dd]=FT.dateCheck(o.tx,rr.tm),hk=HLM.get(sid+"|"+o.h)||[null,null,""];chunk.rows.push([sid,o.h,null,code,oth,ev,code===1||code===4?hk[0]:null,dc,dd,code===1||code===4?hk[1]:null,tok||hk[2]||""]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sid,rr,o.h,ym,null);if(code===4)sum.flag.push([sid,rr.name,code,o.h,oth]);});
  /* Contacted Time from an earlier month, or empty although contacted */
  s.recs.forEach((r,sid)=>{const fl=decF(r.f),con=!!(fl&&(fl.ct===1||fl.pc===1||fl.wa===1||fl.cr===1));if(!con||!sum.tmCol)return;if(!r.tm)sum.noTm++;else if(r.tm.slice(0,7)<ym)sum.old++;});
  await flush(true);s.newN=0;
  {const key=pn+"|"+ym;let e=PREV.get(key);if(!e)PREV.set(key,e={ph:new Map(),fl:new Map(),nm:new Map(),tm:new Map(),at:0,flAt:0});if(!e.tm)e.tm=new Map();s.want.forEach((m,sid)=>{const x=s.hashed.get(m);if(x)e.ph.set(sid,[x.h,RUNAT]);});s.recs.forEach((r,sid)=>{e.fl.set(sid,[r.f,RUNAT]);if(r.name)e.nm.set(sid,r.name);if(s.cols&&s.cols.tm>=0)e.tm.set(sid,[r.tm||"",RUNAT]);});e.at=e.flAt=RUNAT;s.chg=[];s.chgDone=CHG;}
  const pe=PREV.get(pn+"|"+ym),dpp=D&&D.people.find(x=>x.n===pn);sum.chg=CHG.map(c=>Object.assign({name:(s.recs.get(c.sid)||{}).name||(pe&&pe.nm.get(c.sid))||(dpp&&dpp.names[dpp.ids.indexOf(c.sid)])||""},c));RUN.res.push({pn,ym,sum});renderResults();}
 function dtSum(sum,dc,dd,sid,rr,h,ym,cu8){if(dc>0)sum.dt[dc]++;if(dc===3){if(cu8&&!CROPU.has(h))CROPU.set(h,URL.createObjectURL(new Blob([cu8],{type:"image/webp"})));sum.dflag.push([sid,rr.name,rr.tm,dd,h]);}}
+/* image with the checked number boxed: green = this customer's SID/phone, red = another customer's */
+async function boxImg(blob,box,bad,type){if(!box||box.length!==4)return null;let bm;try{bm=await createImageBitmap(blob);}catch(e){return null;}const c=document.createElement("canvas");c.width=bm.width;c.height=bm.height;const g=c.getContext("2d");g.drawImage(bm,0,0);
+ const lw=Math.max(3,Math.round(Math.min(bm.width,bm.height)/120)),x=box[0]*bm.width,y=box[1]*bm.height,w=box[2]*bm.width,h=box[3]*bm.height,pd=lw*1.5;g.strokeStyle=bad?"#dc2626":"#16a34a";g.lineWidth=lw;g.fillStyle=bad?"rgba(220,38,38,.12)":"rgba(22,163,74,.14)";g.fillRect(x-pd,y-pd,w+2*pd,h+2*pd);g.strokeRect(x-pd,y-pd,w+2*pd,h+2*pd);bm.close&&bm.close();
+ const b=await new Promise(r=>c.toBlob(r,type||"image/jpeg",.85));c.width=0;c.height=0;return b;}
 async function cropUrl(h){if(CROPU.has(h))return CROPU.get(h);const id=HIDX.get(h);if(!id)return null;try{const r=await FT.store.get(id);const o=await FT.open(new Uint8Array(r.bytes),PW);
   Object.entries(o.head.img||{}).forEach(([hh,[off,len]])=>{if(!CROPU.has(hh)&&(hh===h||LASTRES.some(x=>(x.sum.chg||[]).some(c=>c.h===hh))))CROPU.set(hh,URL.createObjectURL(new Blob([o.body.slice(o.base+off,o.base+off+len)],{type:"image/webp"})));});}catch(e){}return CROPU.get(h)||null;}
 function renderChanges(){const box=$("#chgBox");if(!box)return;const ch=LASTRES.flatMap(x=>(x.sum.chg||[]).map(c=>[x.pn,x.ym,c]));if(!ch.length){box.innerHTML="";return;}
@@ -652,11 +657,13 @@ function renderChanges(){const box=$("#chgBox");if(!box)return;const ch=LASTRES.
   <div class="tw"><table><thead><tr><th>Sales</th><th>Bulan</th><th>SID</th><th>Nama</th><th>Perubahan</th><th>Foto lama</th></tr></thead><tbody>${ch.slice(0,200).map(([pn,ym,c])=>`<tr><td><b>${esc(pn)}</b></td><td>${ml(ym)}</td><td>${esc(c.sid)}</td><td>${esc(c.name)}</td><td class="bad">${esc(chgTxt(c))}</td><td>${c.h?`<img data-h="${c.h}" data-zoom="1" alt="" style="height:44px;max-width:120px;object-fit:contain;background:#fff;border-radius:6px;cursor:zoom-in">`:"–"}</td></tr>`).join("")}</tbody></table></div>`;
  box.querySelectorAll("img[data-h]").forEach(async im=>{const u=await cropUrl(im.dataset.h);if(u)im.src=u;else im.replaceWith(document.createTextNode("–"));});}
 function renderResults(){if(!RUN)return;LASTRES=RUN.res;renderChanges();const box=$("#results"),fl=RUN.res.flatMap(x=>x.sum.flag.map(f=>[x.pn,x.ym].concat(f))).filter(f=>CROPU.has(f[5]));
+ box.dataset.n=String(fl.length);
  box.innerHTML=`<div class="tw" style="margin-top:0"><table><thead><tr><th>Sales</th><th>Bulan</th><th class="r">Customer berfoto</th><th class="r">Terverifikasi</th><th class="r" title="Ada teks, tapi SID/nomor/nama customer ini tidak terbaca">Belum cocok</th><th class="r" title="Hampir tidak ada teks di foto">Tidak terbaca</th><th class="r" title="Terbaca SID atau nomor customer lain">Data customer lain</th></tr></thead><tbody>${RUN.res.map(x=>{const c=x.sum.c,ocr=c[1]+c[2]+c[3]+c[4];
   return `<tr><td><b>${esc(x.pn)}</b></td><td>${ml(x.ym)}</td><td class="r">${num(x.sum.n)}</td><td class="r"><b>${ocr?Math.round(c[1]/ocr*100):0}%</b> <span class="muted">(${num(c[1])})</span></td><td class="r">${num(c[2])}</td><td class="r">${num(c[3])}</td><td class="r ${c[4]?"bad":""}">${num(c[4])}</td></tr>`;}).join("")}</tbody></table></div>
-  ${fl.length?`<div class="ch" style="margin:16px 0 0"><h2 style="font-size:14px">Foto berisi data customer lain</h2><span class="sub">perlu dicek · klik foto untuk memperbesar</span></div><div class="gal">${fl.slice(0,24).map(f=>`<figure><img src="${CROPU.get(f[5])}" alt="" data-zoom="1"><figcaption><b>${esc(f[0])}</b> · ${ml(f[1])}<br>${esc(f[2])} ${esc(f[3]||"")}<br><span class="bad">terbaca ${esc(f[6])}</span></figcaption></figure>`).join("")}</div>${fl.length>24?`<div class="muted" style="margin-top:6px">dan ${fl.length-24} lainnya; semuanya ada di tab Kontak dashboard.</div>`:""}`:""}
+  ${fl.length?`<div class="ch" style="margin:16px 0 0"><h2 style="font-size:14px">Foto berisi data customer lain</h2><span class="sub">perlu dicek · klik foto untuk memperbesar</span></div><div class="gal">${fl.slice(0,24).map(f=>`<figure><img src="${CROPU.get(f[5])}" alt="" data-zoom="1"${f[7]?` data-box="${f[7].join(",")}"`:""}><figcaption><b>${esc(f[0])}</b> · ${ml(f[1])}<br>${esc(f[2])} ${esc(f[3]||"")}<br><span class="bad">terbaca ${esc(f[6])}</span></figcaption></figure>`).join("")}</div>${fl.length>24?`<div class="muted" style="margin-top:6px">dan ${fl.length-24} lainnya; semuanya ada di tab Kontak dashboard.</div>`:""}`:""}
   ${dtBox()}
   ${D?`<div class="muted" style="margin-top:10px">Rincian per customer ada di tab Kontak dashboard Team C.</div>`:""}`;
+ box.querySelectorAll("img[data-box]").forEach(async im=>{try{const b=await fetch(im.src).then(r=>r.blob()),o=await boxImg(b,im.dataset.box.split(",").map(Number),true);if(o)im.src=URL.createObjectURL(o);}catch(e){}});
  box.querySelectorAll("img[data-dh]").forEach(async im=>{const u=CROPU.get(im.dataset.dh)||await cropUrl(im.dataset.dh);if(u)im.src=u;else im.replaceWith(document.createTextNode("–"));});
  $("#resCard").hidden=false;$("#sync").hidden=!D;}
 
@@ -687,6 +694,7 @@ async function importFiles(list){const st=$("#impSt");let ok=0,bad=0,same=0;for(
  st.textContent=`${ok} file dimasukkan${same?`, ${same} sudah ada sebelumnya`:""}${bad?`, ${bad} tidak bisa dibuka`:""}.`;}
 
 /* ---------- Excel archive: SID, phone, proof photo, what needs checking (password-protected) ---------- */
+const EVN={s:"SID",p:"No HP",n:"nama",f:"nomor"};
 const CODEL=["Tidak terbaca","Terverifikasi","Belum cocok","Tidak terbaca","Data customer lain"],EVL={s:"SID",p:"nomor HP",n:"nama"};
 const decF=f=>f<0?null:{ct:f%3,cr:Math.floor(f/3)%3,wa:Math.floor(f/9)%3,pc:Math.floor(f/27)%3};
 async function toJpeg(blob,maxSide,gray){let bm;try{bm=await createImageBitmap(blob);}catch(e){return null;}const sc=Math.min(1,maxSide/Math.max(bm.width,bm.height)),w=Math.max(1,Math.round(bm.width*sc)),h=Math.max(1,Math.round(bm.height*sc));
@@ -698,7 +706,7 @@ function xlSheets(){const ok=s=>s.who&&/^\d{4}-\d{2}$/.test(s.ym);const on=SHEET
 async function makeExcel(){const st=$("#xlSt"),own=$("#xlOwn").checked,mode=$("#xlMode").value;let pw=PW;
  if(own){const p1=$("#xlPw").value,p2=$("#xlPw2").value;if(p1.length<6){st.textContent="Password Excel minimal 6 karakter.";$("#xlPw").focus();return;}if(p1.length>255){st.textContent="Password terlalu panjang.";return;}if(p1!==p2){st.textContent="Kedua password tidak sama.";$("#xlPw2").focus();return;}pw=p1;}
  const btn=$("#xlGo");btn.disabled=true;const S=XLW.S,list=xlSheets();
- const media=new Map(),dim=new Map(),groups=[];   /* groups: {pn,ym,src,rows:[{sid,name,ph,h,code,oth,ct}]} */
+ const media=new Map(),dim=new Map(),groups=[],KIND=new Map();   /* groups: {pn,ym,src,rows:[{sid,name,ph,h,code,oth,ct}]} */
  const nameOf=(pn,sid)=>{if(!D)return "";const p=D.people.find(x=>x.n===pn);if(!p)return "";const i=p.ids.indexOf(sid);return i>=0?p.names[i]||"":"";};
  const addImg=async(h,blob,max)=>{if(media.has(h))return;const j=await toJpeg(blob,max,false);if(j){media.set(h,{u8:j.u8,ext:"jpeg"});dim.set(h,[j.w,j.h]);}};
  try{
@@ -709,13 +717,13 @@ async function makeExcel(){const st=$("#xlSt"),own=$("#xlOwn").checked,mode=$("#
    const crops=new Map();if(mode==="crop"){let k=0;for(const pk of PACKS){k++;st.textContent=`Mengambil potongan foto… ${k}/${PACKS.length}`;await tick();
      try{const r=await FT.store.get(pk.id);if(!r)continue;const o=await FT.open(new Uint8Array(r.bytes),PW);Object.entries(o.head.img||{}).forEach(([h,[off,len]])=>{if(need.has(h)&&!crops.has(h))crops.set(h,o.body.slice(o.base+off,o.base+off+len));});}catch(e){}}}
    let n=0,zc=new Map();for(const [h,src] of need){n++;if(n%10===0){st.textContent=`Menyiapkan foto ${num(n)}/${num(need.size)}…`;await tick();}
-    if(crops.has(h))await addImg(h,new Blob([crops.get(h)],{type:"image/webp"}),520);
+    if(crops.has(h)){await addImg(h,new Blob([crops.get(h)],{type:"image/webp"}),520);if(media.has(h))KIND.set(h,"c");}
     if(!media.has(h)&&src){let z=zc.get(src.s);if(!z){zc.clear();z=unz(src.s.F,nm=>src.s.hashed.has(nm));zc.set(src.s,z);}if(z[src.m])await addImg(h,new Blob([z[src.m]],{type:src.mime}),mode==="crop"?640:900);}}
    zc.clear();crops.clear();
    for(const s of list){const pn=s.who,allSids=new Set(),p9map=new Map();allSids.names=new Map();SHEETS.filter(o=>o.who===pn).forEach(o=>o.recs.forEach((r,sid)=>{allSids.add(sid);if(r.name)allSids.names.set(sid,r.name);if(r.p9){let a=p9map.get(r.p9);if(!a)p9map.set(r.p9,a=new Set());a.add(sid);}}));
     const dp=D&&D.people.find(x=>x.n===pn);if(dp)dp.ids.forEach(x=>allSids.add(x));const rows=[];
-    s.recs.forEach((r,sid)=>{const fl=decF(r.f),ct=!!(fl&&(fl.ct===1||fl.pc===1||fl.wa===1||fl.cr===1)),m=s.want.get(sid),x=m&&s.hashed.get(m),h=x&&x.h,tx=h?KN.get(h):null;let code=null,oth="";if(h&&tx)[code,oth]=FT.codeOf(tx,sid,r.p9,r.name,allSids,p9map);
-     const cg=CM.get(s).get(sid),[dc,dd]=h&&tx?FT.dateCheck(tx,r.tm):[0,""];rows.push({sid,name:r.name,ph:r.ph||"",h:cg&&cg.k==="del"?cg.h:h,code:h?(tx?code:-1):null,oth,ct,cg,tm:r.tm||"",dt:dtTxt(r.tm||"",dc,dd,s.ym,ct),dbad:dc===3||(!!r.tm&&r.tm.slice(0,7)<s.ym&&ct)||(ct&&!r.tm&&s.cols&&s.cols.tm>=0)});});
+    s.recs.forEach((r,sid)=>{const fl=decF(r.f),ct=!!(fl&&(fl.ct===1||fl.pc===1||fl.wa===1||fl.cr===1)),m=s.want.get(sid),x=m&&s.hashed.get(m),h=x&&x.h,tx=h?KN.get(h):null;let code=null,oth="",ev="",tok="";if(h&&tx)[code,oth,ev,tok]=FT.codeOf(tx,sid,r.p9,r.name,allSids,p9map);const hk=h?HLM.get(sid+"|"+h):null;
+     const cg=CM.get(s).get(sid),[dc,dd]=h&&tx?FT.dateCheck(tx,r.tm):[0,""];rows.push({sid,name:r.name,ph:r.ph||"",h:cg&&cg.k==="del"?cg.h:h,code:h?(tx?code:-1):null,oth,ct,cg,ev,tok:tok||(hk&&hk[2])||"",hlC:hk?hk[0]:null,hlF:hk?hk[1]:null,tm:r.tm||"",dt:dtTxt(r.tm||"",dc,dd,s.ym,ct),dbad:dc===3||(!!r.tm&&r.tm.slice(0,7)<s.ym&&ct)||(ct&&!r.tm&&s.cols&&s.cols.tm>=0)});});
     CM.get(s).forEach(cg=>{if(cg.k!=="gone")return;const pe=PREV.get(pn+"|"+s.ym);rows.push({sid:cg.sid,name:(pe&&pe.nm.get(cg.sid))||nameOf(pn,cg.sid),ph:"",h:cg.h,code:null,oth:"",ct:false,cg});});
     groups.push({pn,ym:s.ym,src:`${s.F.file.name} › ${s.name}`,rows});}}
   else if(PACKS.length){
@@ -725,10 +733,10 @@ async function makeExcel(){const st=$("#xlSt"),own=$("#xlOwn").checked,mode=$("#
     const names=new Map();(o.head.sheets||[]).forEach(sh=>{if(sh.data&&sh.data.recs)sh.data.recs.forEach(x=>names.set(sh.pn+"|"+x[0],x[1]));});
     for(const sh of (o.head.sheets||[])){if(ym&&sh.ym!==ym)continue;const key=sh.pn+"|"+sh.ym;let g=by.get(key);if(!g){g={pn:sh.pn,ym:sh.ym,src:"cadangan foto (.tefoto)",m:new Map()};by.set(key,g);}
      const tms=new Map();(o.head.sheets||[]).forEach(q=>{if(q.pn===sh.pn&&q.ym===sh.ym&&q.data&&q.data.recs)q.data.recs.forEach(x=>tms.set(x[0],x[4]||""));});
-     for(const r of sh.rows){const [sid,h,,code,oth,,,dc,dd]=r,tm=tms.get(sid)||(g.m.get(sid)||{}).tm||"";needH.add(h);g.m.set(sid,{sid,name:names.get(sh.pn+"|"+sid)||nameOf(sh.pn,sid),ph:"",h,code,oth,ct:true,tm,dt:dtTxt(tm,dc||0,dd||"",sh.ym,true),dbad:dc===3||(!!tm&&tm.slice(0,7)<sh.ym)});}}}
+     for(const r of sh.rows){const [sid,h,,code,oth,ev,hlC,dc,dd,hlF,tok]=r,tm=tms.get(sid)||(g.m.get(sid)||{}).tm||"";needH.add(h);g.m.set(sid,{sid,name:names.get(sh.pn+"|"+sid)||nameOf(sh.pn,sid),ph:"",h,code,oth,ct:true,ev,tok:tok||"",hlC:hlC||null,hlF:hlF||null,tm,dt:dtTxt(tm,dc||0,dd||"",sh.ym,true),dbad:dc===3||(!!tm&&tm.slice(0,7)<sh.ym)});}}}
    /* photos live in the pack of the month they were first used, so look through every pack */
    k=0;for(const pk of PACKS){k++;st.textContent=`Mengambil foto ${k}/${PACKS.length} · ${num(media.size)}/${num(needH.size)}…`;await tick();const o=await open(pk);if(!o)continue;const img=o.head.img||{};let n=0;
-    for(const h in img){if(!needH.has(h)||media.has(h))continue;const [off,len]=img[h];await addImg(h,new Blob([o.body.slice(o.base+off,o.base+off+len)],{type:"image/webp"}),520);if(++n%25===0){st.textContent=`Mengambil foto ${k}/${PACKS.length} · ${num(media.size)}/${num(needH.size)}…`;await tick();}}}
+    for(const h in img){if(!needH.has(h)||media.has(h))continue;const [off,len]=img[h];await addImg(h,new Blob([o.body.slice(o.base+off,o.base+off+len)],{type:"image/webp"}),520);KIND.set(h,"c");if(++n%25===0){st.textContent=`Mengambil foto ${k}/${PACKS.length} · ${num(media.size)}/${num(needH.size)}…`;await tick();}}}
    by.forEach(g=>groups.push({pn:g.pn,ym:g.ym,src:g.src,rows:[...g.m.values()]}));}
   else{st.textContent="Pilih file Customer Background di langkah 1, atau muat cadangan .tefoto dulu.";return;}
   /* sheets: one per sales-month */
@@ -739,14 +747,17 @@ async function makeExcel(){const st=$("#xlSt"),own=$("#xlOwn").checked,mode=$("#
     if(r.cg){tx="Perlu dicek: "+chgTxt(r.cg)+(r.cg.k==="del"||r.cg.k==="gone"?" (foto = bukti lama)":"");s=S.bad;k=0;}
     else if(r.h==null){if(r.ct){tx="Perlu dicek: contacted tanpa foto";s=S.bad;k=0;}else{tx="–";s=S.mute;k=3;}}
     else if(r.code===-1){tx="Foto belum dibaca";s=S.warn;k=1;}
-    else if(r.code===1){tx="✓ Cocok";s=S.good;k=2;}
-    else if(r.code===4){tx=`Perlu dicek: foto berisi customer lain (${r.oth})`;s=S.bad;k=0;}
+    else if(r.code===1){tx="✓ Cocok"+(r.tok&&EVN[r.ev]?` · ${EVN[r.ev]} ${r.tok}`:"");s=S.good;k=2;}
+    else if(r.code===4){tx=`Perlu dicek: foto berisi customer lain (${r.oth}${r.tok&&r.tok!==r.oth?`, terbaca ${r.tok}`:""})`;s=S.bad;k=0;}
     else if(r.code===2&&r.oth){tx=`Perlu dicek: nomor di foto terdaftar di customer lain (${r.oth}); nomor HP customer ini kosong, mungkin nomor kedua`;s=S.bad;k=0;}
     else if(r.code===2){tx="Perlu dicek: SID/nomor/nama tidak terbaca";s=S.bad;k=0;}
     else{tx="Perlu dicek: foto buram/tanpa teks";s=S.bad;k=0;}
-    if(r.h!=null&&!dim.has(r.h)&&k!==0)tx+=" (foto tidak bisa ditampilkan)";return {k,h:r.h,c:pick([0,{v:r.sid,s:S.text},{v:r.name,s:S.wrap},{v:r.ph,s:S.text},{v:"",s:S.wrap},{v:tx,s},{v:r.tm?dLong(r.tm):"",s:S.text},{v:r.dt||"",s:r.dbad?S.bad:r.dt&&r.dt.startsWith("✓")?S.good:S.wrap}])};});
+    if(r.h!=null&&!dim.has(r.h)&&k!==0)tx+=" (foto tidak bisa ditampilkan)";return {k,h:r.h,_g:r,c:pick([0,{v:r.sid,s:S.text},{v:r.name,s:S.wrap},{v:r.ph,s:S.text},{v:"",s:S.wrap},{v:tx,s},{v:r.tm?dLong(r.tm):"",s:S.text},{v:r.dt||"",s:r.dbad?S.bad:r.dt&&r.dt.startsWith("✓")?S.good:S.wrap}])};});
+   for(const r of rows){const g0=r._g;if(!g0||g0.h==null||!media.has(g0.h))continue;const box=KIND.get(g0.h)==="c"?g0.hlC:g0.hlF;if(!box)continue;const key=g0.h+"|"+g0.sid;
+    if(!media.has(key)){const b=await boxImg(new Blob([media.get(g0.h).u8],{type:"image/jpeg"}),box,g0.code===4);if(b){media.set(key,{u8:new Uint8Array(await b.arrayBuffer()),ext:"jpeg"});dim.set(key,dim.get(g0.h));}}
+    if(media.has(key))r.key=key;}
    rows.sort((a,b)=>a.k-b.k);const cnt={n:rows.length,foto:rows.filter(r=>r.h!=null).length,ok:rows.filter(r=>r.k===2).length,chk:rows.filter(r=>r.k===0).length,unread:rows.filter(r=>r.k===1).length};
-   const pics=[];rows.forEach((r,i)=>{r.c[0]={v:i+1,s:S.num};if(r.h!=null&&dim.has(r.h)){const [w,hh]=dim.get(r.h),sc=Math.min(BOXW/w,BOXH/hh);pics.push({r:i+2,c:fc,key:r.h,w:Math.round(w*sc),h:Math.round(hh*sc),alt:r.c[1].v});}});
+   const pics=[];rows.forEach((r,i)=>{r.c[0]={v:i+1,s:S.num};if(r.h!=null&&dim.has(r.h)){const [w,hh]=dim.get(r.h),sc=Math.min(BOXW/w,BOXH/hh);pics.push({r:i+2,c:fc,key:r.key||r.h,w:Math.round(w*sc),h:Math.round(hh*sc),alt:r.c[1].v});}});
    const cl=XLW.colL;sheets.push({name:`${g.pn} ${ml(g.ym)}`,cols:pick(W),rows:[{h:24,c:[{v:`${g.pn} · ${ml(g.ym)}`,s:S.title},{v:"",s:S.def},{v:`Sumber: ${g.src}`,s:S.note}]},{h:24,c:pick(H).map(v=>({v,s:S.head}))}].concat(rows.map(r=>({h:r.h!=null&&dim.has(r.h)?ROWH:20,c:r.c}))),
     freeze:2,filter:{r0:1,c0:0,r1:1+rows.length,c1:last},merges:[`C1:${cl(last)}1`],pics});sum.push([g.pn,g.ym,cnt]);}
   const sr=[{h:24,c:[{v:"Arsip foto bukti",s:S.title}]},{h:18,c:[{v:"Rahasia: berisi data customer. Simpan di folder pribadi.",s:S.note}]},{h:24,c:["Sales","Bulan","Customer","Ada foto","Cocok","Perlu dicek","Belum dibaca"].map(v=>({v,s:S.head}))}]
