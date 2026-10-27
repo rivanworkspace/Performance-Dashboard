@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta name="app-version" content="26.10.21-3">
+<meta name="app-version" content="26.10.27-1">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cek Foto Bukti · Team E</title>
@@ -110,7 +110,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
    <div class="row"><div id="packs" class="muted"></div><span style="flex:1"></span><button id="expAll">⬇ Simpan .tefoto</button><label class="btn">⬆ Muat .tefoto…<input type="file" id="impIn" accept=".tefoto" multiple hidden></label></div>
    <div class="muted" id="impSt"></div></section>
  </main>
- <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.21-3</div>
+ <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.27-1</div>
 </div>
 <script>/*@A:fflate-c3b34f2e9f5e.txt@*/</script>
 <script>/*@A:tess-a8e29918d098.txt@*/</script>
@@ -205,7 +205,32 @@ const FT=(function(){
   for(const m of j.match(/[0-9A-Za-z|!]{9,}/g)||[])for(const w of m.match(/(?:[0-9][0-9A-Za-z|!]?){5,}[0-9]/g)||[]){let d=0;for(const c of w)if(c>="0"&&c<="9")d++;
    if(w.length>=9&&d>=.7*w.length&&d<w.length)out.add([...w].map(c=>c>="0"&&c<="9"?c:(CONF[c]||"?")).join(""));}
   return [...out];}
- function txOf(words){const t=words.map(w=>w[0]).join(" "),dg=t.replace(/(\d)[ \-.](?=\d)/g,"$1");const nums=[...new Set(words.flatMap(w=>String(w[0]).match(/\d{8,}/g)||[]).concat(dg.match(/\d{8,13}/g)||[]))],lw=[...new Set(t.toLowerCase().match(/[a-z]{4,}/g)||[])];return [words.length,nums.join(" "),lw.join(" "),candsOf(t).join(" ")];}
+ function txOf(words){const t=words.map(w=>w[0]).join(" "),dg=t.replace(/(\d)[ \-.](?=\d)/g,"$1");const nums=[...new Set(words.flatMap(w=>String(w[0]).match(/\d{8,}/g)||[]).concat(dg.match(/\d{8,13}/g)||[]))],lw=[...new Set(t.toLowerCase().match(/[a-z]{4,}/g)||[])];return [words.length,nums.join(" "),lw.join(" "),candsOf(t).join(" "),datesOf(t)];}
+ /* ---- dates in a proof photo, compared with the sheet's Contacted Time ---- */
+ const MON={jan:1,feb:2,mar:3,apr:4,mei:5,may:5,jun:6,jul:7,agu:8,agt:8,aug:8,sep:9,okt:10,oct:10,nov:11,des:12,dec:12,dis:12};
+ const pad=n=>String(n).padStart(2,"0"),okD=(y,m,d)=>{if(m<1||m>12||d<1)return false;const x=new Date(Date.UTC(y,m-1,d));return x.getUTCMonth()===m-1&&x.getUTCDate()===d;};
+ /* "2025-10-12" (full date) or "----10-12" (day and month only); "~" when the photo only says Today / Hari ini / a weekday */
+ function datesOf(t){const s=String(t).replace(/\s+/g," "),out=new Set();let m;
+  const r1=/(^|[^\d.:])(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4}|\d{2})(?![\d.:])/g;while((m=r1.exec(s))){let a=+m[2],b=+m[3],y=+m[4];if(m[4].length===2){if(y<24||y>29)continue;y+=2000;}if(y<2023||y>2030)continue;if(okD(y,b,a))out.add(`${y}-${pad(b)}-${pad(a)}`);if(a<=12&&b>12&&okD(y,a,b))out.add(`${y}-${pad(a)}-${pad(b)}`);}
+  const r2=/(^|[^\d])(20\d\d)[\/\-.](\d{1,2})[\/\-.](\d{1,2})(?!\d)/g;while((m=r2.exec(s))){if(okD(+m[2],+m[3],+m[4]))out.add(`${m[2]}-${pad(m[3])}-${pad(m[4])}`);}
+  const r3=/(^|[^\d\/.:\-])(\d{1,2})-(\d{1,2}) \d{1,2}:\d{2}(?!\d)/g;while((m=r3.exec(s))){if(okD(2024,+m[2],+m[3]))out.add(`----${pad(m[2])}-${pad(m[3])}`);}
+  const MW="(jan|feb|mar|apr|mei|may|jun|jul|agu|agt|aug|sep|okt|oct|nov|des|dec|dis)[a-z]*\\.?";
+  const r4=new RegExp("(^|[^\\d])(\\d{1,2}) ?"+MW+",? ?(\\d{4})?(?!\\d)","gi");while((m=r4.exec(s))){const mo=MON[m[3].toLowerCase()],y=m[4]&&+m[4]>=2023&&+m[4]<=2030?+m[4]:0;if(okD(y||2024,mo,+m[2]))out.add(y?`${y}-${pad(mo)}-${pad(m[2])}`:`----${pad(mo)}-${pad(m[2])}`);}
+  const r5=new RegExp(MW+" (\\d{1,2}),? ?(\\d{4})?(?!\\d)","gi");while((m=r5.exec(s))){const mo=MON[m[1].toLowerCase()],y=m[3]&&+m[3]>=2023&&+m[3]<=2030?+m[3]:0;if(okD(y||2024,mo,+m[2]))out.add(y?`${y}-${pad(mo)}-${pad(m[2])}`:`----${pad(mo)}-${pad(m[2])}`);}
+  const rel=/\b(hari ini|today|kemarin|yesterday|senin|selasa|rabu|kamis|jumat|sabtu|minggu|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(s);
+  return [...out].slice(0,16).join(" ")+(rel?" ~":"");}
+ /* Contacted Time cell -> "YYYY-MM-DD" (Excel serial number, ISO text, dd/mm/yyyy or "15 Nov 2025"); "" when empty or unreadable */
+ function tmParse(v){if(v==null)return "";const s=String(v).trim();if(!s)return "";let m=s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(m&&okD(+m[1],+m[2],+m[3]))return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  if(/^\d{5}(\.\d+)?$/.test(s)){const f=+s;if(f>30000&&f<80000){const d=new Date(Date.UTC(1899,11,30)+Math.floor(f)*864e5);return `${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;}}
+  m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);if(m&&okD(+m[3],+m[2],+m[1]))return `${m[3]}-${pad(m[2])}-${pad(m[1])}`;
+  const d=datesOf(s).split(" ").find(x=>/^\d{4}-/.test(x));return d||"";}
+ const dn=s=>Date.UTC(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10))/864e5;
+ /* [code, photo date]: 0 no Contacted Time, -1 photo read before dates were read, 1 same day, 2 one day apart, 3 different, 4 no date in the photo */
+ function dateCheck(t,tm){if(!tm)return [0,""];if(!t||t.length<5)return [-1,""];const ds=String(t[4]||"").split(" ").filter(x=>x&&x!=="~");if(!ds.length)return [4,String(t[4]||"").includes("~")?"~":""];
+  const c=dn(tm),cy=+tm.slice(0,4);let best=null;
+  for(const x of ds){const ys=x.startsWith("----")?[cy,cy-1,cy+1]:[+x.slice(0,4)];for(const y of ys){const v=`${y}-${x.slice(-5)}`;if(!okD(y,+v.slice(5,7),+v.slice(8,10)))continue;const k=Math.abs(dn(v)-c);if(!best||k<best[0])best=[k,v];}}
+  if(!best)return [4,""];return [best[0]===0?1:best[0]===1?2:3,best[1]];}
+
  /* a number the reader got almost right: at most `mx` digits wrong or unreadable (2 for SID, 1 for phone) */
  function near(cs,tg,mx){const L=tg.length;for(const c of cs){if(c.length<L)continue;for(let i=0;i+L<=c.length;i++){let bad=0,q=0;for(let k=0;k<L;k++){const a=c[i+k];if(a==="?")q++;else if(a!==tg[k])bad++;if(bad>mx||q>2||bad+q>mx)break;}if(bad<=mx&&q<=2&&bad+q<=mx)return c.slice(i,i+L);}}return null;}
  function codeOf(t,sid,p9,name,allSids,p9map){if(!t)return [0,"","",""];const nums=t[1]?t[1].split(" "):[],lw=t[2]?t[2].split(" "):[];
@@ -246,7 +271,7 @@ const FT=(function(){
   const x0=Math.max(0,Math.min(...ws.map(w=>w[1]))-12),y0=Math.max(0,Math.min(...ws.map(w=>w[2]))-12),x1=Math.min(W,Math.max(...ws.map(w=>w[1]+w[3]))+12),y1=Math.min(H,Math.max(...ws.map(w=>w[2]+w[4]))+12);
   const hs=ws.map(w=>w[4]).sort((a,b)=>a-b),n=hs.length,mh=(n%2?hs[(n-1)/2]:(hs[n/2-1]+hs[n/2])/2)||12;
   return {box:[Math.trunc(x0),Math.trunc(y0),Math.trunc(x1),Math.trunc(y1)],s:Math.min(1,11/mh,760/Math.max(1,x1-x0),900/Math.max(1,y1-y0)),k:"b"};}
- return {ok,isPack,meta,seal,open,reseal,store,get ch(){return ch;},txOf,codeOf,cropBox,hlBox,sameName};
+ return {ok,isPack,meta,seal,open,reseal,store,get ch(){return ch;},txOf,codeOf,cropBox,hlBox,sameName,datesOf,tmParse,dateCheck};
 })();
 </script>
 <script>/*@A:cfb-c843298014fa.txt@*/
@@ -391,8 +416,8 @@ async function unlock(ev){ev.preventDefault();const pw=$("#pw").value,err=$("#lo
 async function loadKnown(recs){KN.clear();PACKS=[];PREV.clear();HIDX.clear();const heads=[];for(const r of recs){const u8=new Uint8Array(r.bytes),meta=r.meta||FT.meta(u8);PACKS.push({id:r.id,meta,size:u8.length,at:r.at});
   try{const o=await FT.open(u8,PW),txm=o.head.tx||{};Object.keys(o.head.img||{}).forEach(h=>{if(txm[h])KN.set(h,txm[h]);if(!HIDX.has(h))HIDX.set(h,r.id);});heads.push([meta.made||0,o.head]);}catch(e){}}
  PACKS.sort((a,b)=>(a.meta.made||0)-(b.meta.made||0));
- heads.sort((a,b)=>a[0]-b[0]).forEach(([made,h])=>(h.sheets||[]).forEach(sx=>{const key=sx.pn+"|"+sx.ym;let e=PREV.get(key);if(!e)PREV.set(key,e={ph:new Map(),fl:new Map(),nm:new Map(),at:0,flAt:0});
-  (sx.rows||[]).forEach(r=>{e.ph.set(r[0],[r[1],sx.at||made]);});e.at=Math.max(e.at,sx.at||made);if(sx.data&&sx.data.recs){sx.data.recs.forEach(x=>{e.fl.set(x[0],[x[3],sx.at||made]);if(x[1])e.nm.set(x[0],x[1]);});e.flAt=Math.max(e.flAt,sx.at||made);}}));}
+ heads.sort((a,b)=>a[0]-b[0]).forEach(([made,h])=>(h.sheets||[]).forEach(sx=>{const key=sx.pn+"|"+sx.ym;let e=PREV.get(key);if(!e)PREV.set(key,e={ph:new Map(),fl:new Map(),nm:new Map(),tm:new Map(),at:0,flAt:0});
+  (sx.rows||[]).forEach(r=>{e.ph.set(r[0],[r[1],sx.at||made]);});e.at=Math.max(e.at,sx.at||made);if(sx.data&&sx.data.recs){sx.data.recs.forEach(x=>{e.fl.set(x[0],[x[3],sx.at||made]);if(x[1])e.nm.set(x[0],x[1]);if(sx.data.tmCol)e.tm.set(x[0],[x[4]||"",sx.at||made]);});e.flAt=Math.max(e.flAt,sx.at||made);}}));}
 /* ---------- photos that look like another customer's proof (the same screenshot cropped or taken again) ----------
    Compared by the customer-specific words and numbers read in the photo (words common to every screenshot are ignored). */
 /* ---------- what changed since the last reading of the same sales and month ---------- */
@@ -408,9 +433,12 @@ function sheetChanges(s){if(!s.who||!/^\d{4}-\d{2}$/.test(s.ym)||!s.hashed)retur
   if(!x)out.push({sid,k:"del",h,at});else if(x.h!==h)out.push({sid,k:"rep",h,cur:x.h,at});});
  prevF.forEach(([f,at],sid)=>{const rec=s.recs.get(sid);if(!rec||f==null||f<0||rec.f<0)return;const a=decF(f),b=decF(rec.f),ca=a.ct===1||a.pc===1||a.wa===1||a.cr===1,cb=b.ct===1||b.pc===1||b.wa===1||b.cr===1;
   if(ca&&!cb){out.push({sid,k:"unc",at});return;}const lost=[a.pc,a.wa,a.cr].map((v,i)=>v===1&&[b.pc,b.wa,b.cr][i]!==1?CHN[i]:null).filter(Boolean);if(cb&&lost.length)out.push({sid,k:"chn",lost,at});});
+ /* Contacted Time edited after the last check (only when the sheet has the column) */
+ if(e&&e.tm&&s.cols&&s.cols.tm>=0)e.tm.forEach(([was,at],sid)=>{const rec=s.recs.get(sid);if(!rec)return;const now=rec.tm||"";if(was!==now)out.push({sid,k:"tm",lost:[was,now],at});});
  return out;}
-const CHGL={gone:"customer hilang dari sheet",del:"foto bukti dihapus",rep:"foto bukti diganti",unc:"contacted diubah jadi uncontacted",chn:"channel dicabut"};
-const chgTxt=c=>`${c.k==="chn"?`channel ${c.lost.join("+")} dicabut`:CHGL[c.k]} setelah dicek${c.at?" "+dShort(c.at):""}`;
+const CHGL={gone:"customer hilang dari sheet",del:"foto bukti dihapus",rep:"foto bukti diganti",unc:"contacted diubah jadi uncontacted",chn:"channel dicabut",tm:"Contacted Time diubah"};
+const dLong=v=>{if(!v)return "kosong";const d=new Date(v+"T00:00:00");return isNaN(d)?v:`${d.getDate()} ${MN[d.getMonth()]} ${d.getFullYear()}`;};
+const chgTxt=c=>`${c.k==="chn"?`channel ${c.lost.join("+")} dicabut`:c.k==="tm"?`Contacted Time diubah dari ${dLong(c.lost[0])} ke ${dLong(c.lost[1])}`:CHGL[c.k]} setelah dicek${c.at?" "+dShort(c.at):""}`;
 
 /* ---------- xlsx ---------- */
 const xunesc=s=>s.replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&#(\d+);/g,(_,n)=>String.fromCharCode(+n)).replace(/&amp;/g,"&");
@@ -450,6 +478,7 @@ const COLK={
  pc:["phonecall","call","calls","telp","panggilan","telepon1"],
  wa:["whatsapp","wa","whatsappchat"],
  cr:["chatroom","chat","livechat","inappchat"],
+ tm:["contactedtime","contacttime","contacteddate","waktukontak","tanggalkontak","waktudihubungi","tanggaldihubungi","lastcontact","lastcontacted"],
  ct:["contacted","kontak","dihubungi","contactstatus","statuskontak","contact"],
  pf:["contactedproof","proof","bukti","buktikontak","fotobukti","buktifoto","screenshot","ss","contactproof","evidence"]};
 const isSid=v=>/^\d{8,12}$/.test(String(v==null?"":v).trim().replace(/\.0$/,""));
@@ -457,8 +486,8 @@ function findCols(H){const used=new Set(),col={};
  const pick=(k,loose)=>{for(const key of COLK[k]){const i=H.findIndex((h,j)=>!used.has(j)&&h===key);if(i>=0)return i;}
   if(loose)for(const key of COLK[k]){if(key.length<4)continue;const i=H.findIndex((h,j)=>!used.has(j)&&h&&h.startsWith(key));if(i>=0)return i;}return -1;};
  /* exact names first (so "Contacted Proof" is not taken as "Contacted"), then names that start with a known word */
- ["sid","pf","ph","name","vip","pc","wa","cr","ct"].forEach(k=>{const i=pick(k,false);col[k]=i;if(i>=0)used.add(i);});
- ["sid","pf","ph","name","vip","pc","wa","cr","ct"].forEach(k=>{if(col[k]<0){const i=pick(k,true);col[k]=i;if(i>=0)used.add(i);}});
+ ["sid","pf","tm","ph","name","vip","pc","wa","cr","ct"].forEach(k=>{const i=pick(k,false);col[k]=i;if(i>=0)used.add(i);});
+ ["sid","pf","tm","ph","name","vip","pc","wa","cr","ct"].forEach(k=>{if(col[k]<0){const i=pick(k,true);col[k]=i;if(i>=0)used.add(i);}});
  return col;}
 async function scanSheet(F,sh){let z=unz(F,n=>n===sh.path||n===relPath(sh.path));if(!z[sh.path])return null;const xml=td.decode(z[sh.path]),rows=sheetRows(xml,F.ss);
  /* header row: has a SID-like name; otherwise the row above the first block of SID-looking numbers */
@@ -470,7 +499,7 @@ async function scanSheet(F,sh){let z=unz(F,n=>n===sh.path||n===relPath(sh.path))
  const recs=new Map();rows.slice(hi+1).forEach(r=>{if(!r)return;const sid=String(r[col.sid]==null?"":r[col.sid]).trim().replace(/\.0$/,"");if(!/^\d{8,12}$/.test(sid))return;
   const phr=col.ph>=0&&r[col.ph]!=null?String(r[col.ph]).trim():"",ph0=phr.replace(/\.0$/,""),ph=/^8\d{7,12}$/.test(ph0)?"0"+ph0:ph0,pd=/e\+/i.test(ph0)?"":ph0.replace(/\D/g,"");
   const hasCh=col.pc>=0||col.wa>=0||col.cr>=0;
-  recs.set(sid,{ph,name:col.name>=0&&r[col.name]!=null?String(r[col.name]).trim():"",vip:col.vip>=0&&r[col.vip]!=null?String(r[col.vip]).trim():"",p9:pd.length>=9?pd.slice(-9):"",
+  recs.set(sid,{ph,tm:col.tm>=0?FT.tmParse(r[col.tm]):"",name:col.name>=0&&r[col.name]!=null?String(r[col.name]).trim():"",vip:col.vip>=0&&r[col.vip]!=null?String(r[col.vip]).trim():"",p9:pd.length>=9?pd.slice(-9):"",
    f:hasCh||col.ct>=0?(col.pc>=0?bv(r[col.pc]):2)*27+(col.wa>=0?bv(r[col.wa]):2)*9+(col.cr>=0?bv(r[col.cr]):2)*3+(col.ct>=0?bv(r[col.ct]):2):-1});});
  if(!recs.size)return null;
  const sidAt=ri=>{for(let k=ri;k>=Math.max(hi+1,ri-2);k--){const row=rows[k];if(row&&isSid(row[col.sid]))return String(row[col.sid]).trim().replace(/\.0$/,"");}return "";};
@@ -574,8 +603,8 @@ async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.n
  const allSids=new Set(),p9map=new Map();allSids.names=new Map();SHEETS.filter(o=>o.who===pn).forEach(o=>o.recs.forEach((r,sid)=>{allSids.add(sid);if(r.name)allSids.names.set(sid,r.name);if(r.p9){let a=p9map.get(r.p9);if(!a)p9map.set(r.p9,a=new Set());a.add(sid);}}));
  if(D){const p=D.people.find(x=>x.n===pn);if(p)p.ids.forEach((x,k)=>{allSids.add(x);if(!allSids.names.has(x)&&p.names&&p.names[k])allSids.names.set(x,p.names[k]);});}
  const bySid=new Map();s.want.forEach((m,sid)=>bySid.set(sid,m));const firstSid=new Map();bySid.forEach((m,sid)=>{if(!firstSid.has(m))firstSid.set(m,sid);});
- const data={t:`${s.F.file.name.replace(/\.xlsx$/i,"")} · ${s.name}`,recs:[...s.recs].map(([sid,r])=>[sid,r.name,r.vip,r.f])};
- let chunk={rows:[],imgs:[],tx:{}},first=true,sum={n:0,c:[0,0,0,0,0],flag:[]};const flush=async(final)=>{if(!chunk.rows.length&&!first)return;
+ const data={t:`${s.F.file.name.replace(/\.xlsx$/i,"")} · ${s.name}`,recs:[...s.recs].map(([sid,r])=>[sid,r.name,r.vip,r.f,r.tm||""]),tmCol:s.cols&&s.cols.tm>=0?1:0};
+ let chunk={rows:[],imgs:[],tx:{}},first=true,sum={n:0,c:[0,0,0,0,0],flag:[],dt:[0,0,0,0,0],dflag:[],old:0,noTm:0,tmCol:s.cols&&s.cols.tm>=0};const flush=async(final)=>{if(!chunk.rows.length&&!first)return;
   const c=chunk,isFirst=first;chunk={rows:[],imgs:[],tx:{}};first=false;
   const head={sheets:[Object.assign({pn,ym,t:data.t,data:isFirst?data:null,rows:c.rows,at:RUNAT},isFirst&&CHG.length?{chg:CHG.map(x=>[x.sid,x.k,x.h||"",x.at||0,x.lost||null])}:{})],tx:c.tx};const id=`E-${ym}-${pn}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
   const bytes=await FT.seal(head,c.imgs,{id,made:Date.now(),months:[ym],people:[pn],rows:c.rows.length,src:"Alat Cek Foto"},PW);
@@ -588,7 +617,7 @@ async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.n
  const sidsOf=m=>[...bySid].filter(([,mm])=>mm===m).map(([q])=>q),miss=(tx,m)=>sidsOf(m).some(q=>{const rr=s.recs.get(q);return FT.codeOf(tx,q,rr.p9,rr.name,allSids,p9map)[0]!==1;});
  let again=0;for(const m of todo){const x=hv.get(m);if(!KN.has(x.h))continue;const tx=KN.get(x.h);
   /* read before this version's better matching and not matched: read once more */
-  if(!tx[3]&&miss(tx,m)){again++;continue;}done.set(m,{h:x.h,sd:null,tx,known:1});}
+  if((!tx[3]&&miss(tx,m))||(tx.length<5&&sidsOf(m).some(q=>(s.recs.get(q)||{}).tm))){again++;continue;}done.set(m,{h:x.h,sd:null,tx,known:1});}
  if(again&&RUN)RUN.total+=again;
  const queue=todo.filter(m=>!done.has(m));let inflight=0,qi=0,err=0;
  await new Promise(resolve=>{const next=()=>{if(RUN.stop){if(!inflight)resolve();return;}
@@ -602,17 +631,20 @@ async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.n
       out={h:x.h,sd:o.sd,tx,cu8:cr.u8,words,box:cr.box};chunk.imgs.push({h:x.h,u8:cr.u8,w:cr.w,ht:cr.ht,k:cr.k});chunk.tx[x.h]=tx;KN.set(x.h,tx);}catch(e){err++;}
      if(out)done.set(m,out);RUN.done++;inflight--;
      /* rows of this photo */
-     if(out)bySid.forEach((mm,sd_)=>{if(mm!==m)return;const rr=s.recs.get(sd_),[code,oth,ev,tok]=FT.codeOf(out.tx,sd_,rr.p9,rr.name,allSids,p9map),hl=code===1||code===4?FT.hlBox(out.words,tok,ev,out.box):null;chunk.rows.push([sd_,out.h,out.sd,code,oth,ev,hl]);sum.n++;sum.c[code]++;if(code===4){if(!CROPU.has(out.h))CROPU.set(out.h,URL.createObjectURL(new Blob([out.cu8],{type:"image/webp"})));sum.flag.push([sd_,rr.name,code,out.h,oth]);}});
+     if(out)bySid.forEach((mm,sd_)=>{if(mm!==m)return;const rr=s.recs.get(sd_),[code,oth,ev,tok]=FT.codeOf(out.tx,sd_,rr.p9,rr.name,allSids,p9map),hl=code===1||code===4?FT.hlBox(out.words,tok,ev,out.box):null,[dc,dd]=FT.dateCheck(out.tx,rr.tm);chunk.rows.push([sd_,out.h,out.sd,code,oth,ev,hl,dc,dd]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sd_,rr,out.h,ym,out.cu8);if(code===4){if(!CROPU.has(out.h))CROPU.set(out.h,URL.createObjectURL(new Blob([out.cu8],{type:"image/webp"})));sum.flag.push([sd_,rr.name,code,out.h,oth]);}});
      const pc=RUN.total?RUN.done/RUN.total*100:100;$("#bar").style.width=pc.toFixed(1)+"%";$("#pgN").textContent=`${num(RUN.done)} / ${num(RUN.total)} foto`;$("#pgEta").textContent=RUN.paused?"dijeda":eta();st.textContent=`Sedang membaca: ${pn} · ${ml(ym)}${RUN.pd?` · ${num(RUN.pd)} foto dibaca ulang dengan pembaca kedua`:""}${err?` · ${err} foto gagal dibaca`:""}${PDOFF?" · pembaca kedua tidak bisa dipakai di browser ini":""}`;
      if(chunk.imgs.length>=120)await flush(false);
      if(qi>=queue.length&&!inflight)resolve();else next();})();}
    if(RUN.paused&&!inflight){waitPause().then(next);}
    if(qi>=queue.length&&!inflight)resolve();};next();});
  /* rows whose photo was already known */
- bySid.forEach((m,sid)=>{const o=done.get(m);if(!o||!o.known)return;const rr=s.recs.get(sid),[code,oth,ev]=FT.codeOf(o.tx,sid,rr.p9,rr.name,allSids,p9map);chunk.rows.push([sid,o.h,null,code,oth,ev,null]);sum.n++;sum.c[code]++;if(code===4)sum.flag.push([sid,rr.name,code,o.h,oth]);});
+ bySid.forEach((m,sid)=>{const o=done.get(m);if(!o||!o.known)return;const rr=s.recs.get(sid),[code,oth,ev]=FT.codeOf(o.tx,sid,rr.p9,rr.name,allSids,p9map),[dc,dd]=FT.dateCheck(o.tx,rr.tm);chunk.rows.push([sid,o.h,null,code,oth,ev,null,dc,dd]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sid,rr,o.h,ym,null);if(code===4)sum.flag.push([sid,rr.name,code,o.h,oth]);});
+ /* Contacted Time from an earlier month, or empty although contacted */
+ s.recs.forEach((r,sid)=>{const fl=decF(r.f),con=!!(fl&&(fl.ct===1||fl.pc===1||fl.wa===1||fl.cr===1));if(!con||!sum.tmCol)return;if(!r.tm)sum.noTm++;else if(r.tm.slice(0,7)<ym)sum.old++;});
  await flush(true);s.newN=0;
- {const key=pn+"|"+ym;let e=PREV.get(key);if(!e)PREV.set(key,e={ph:new Map(),fl:new Map(),nm:new Map(),at:0,flAt:0});s.want.forEach((m,sid)=>{const x=s.hashed.get(m);if(x)e.ph.set(sid,[x.h,RUNAT]);});s.recs.forEach((r,sid)=>{e.fl.set(sid,[r.f,RUNAT]);if(r.name)e.nm.set(sid,r.name);});e.at=e.flAt=RUNAT;s.chg=[];s.chgDone=CHG;}
+ {const key=pn+"|"+ym;let e=PREV.get(key);if(!e)PREV.set(key,e={ph:new Map(),fl:new Map(),nm:new Map(),tm:new Map(),at:0,flAt:0});if(!e.tm)e.tm=new Map();s.want.forEach((m,sid)=>{const x=s.hashed.get(m);if(x)e.ph.set(sid,[x.h,RUNAT]);});s.recs.forEach((r,sid)=>{e.fl.set(sid,[r.f,RUNAT]);if(r.name)e.nm.set(sid,r.name);if(s.cols&&s.cols.tm>=0)e.tm.set(sid,[r.tm||"",RUNAT]);});e.at=e.flAt=RUNAT;s.chg=[];s.chgDone=CHG;}
  const pe=PREV.get(pn+"|"+ym),dpp=D&&D.people.find(x=>x.n===pn);sum.chg=CHG.map(c=>Object.assign({name:(s.recs.get(c.sid)||{}).name||(pe&&pe.nm.get(c.sid))||(dpp&&dpp.names[dpp.ids.indexOf(c.sid)])||""},c));RUN.res.push({pn,ym,sum});renderResults();}
+function dtSum(sum,dc,dd,sid,rr,h,ym,cu8){if(dc>0)sum.dt[dc]++;if(dc===3){if(cu8&&!CROPU.has(h))CROPU.set(h,URL.createObjectURL(new Blob([cu8],{type:"image/webp"})));sum.dflag.push([sid,rr.name,rr.tm,dd,h]);}}
 async function cropUrl(h){if(CROPU.has(h))return CROPU.get(h);const id=HIDX.get(h);if(!id)return null;try{const r=await FT.store.get(id);const o=await FT.open(new Uint8Array(r.bytes),PW);
   Object.entries(o.head.img||{}).forEach(([hh,[off,len]])=>{if(!CROPU.has(hh)&&(hh===h||LASTRES.some(x=>(x.sum.chg||[]).some(c=>c.h===hh))))CROPU.set(hh,URL.createObjectURL(new Blob([o.body.slice(o.base+off,o.base+off+len)],{type:"image/webp"})));});}catch(e){}return CROPU.get(h)||null;}
 function renderChanges(){const box=$("#chgBox");if(!box)return;const ch=LASTRES.flatMap(x=>(x.sum.chg||[]).map(c=>[x.pn,x.ym,c]));if(!ch.length){box.innerHTML="";return;}
@@ -623,9 +655,20 @@ function renderResults(){if(!RUN)return;LASTRES=RUN.res;renderChanges();const bo
  box.innerHTML=`<div class="tw" style="margin-top:0"><table><thead><tr><th>Sales</th><th>Bulan</th><th class="r">Customer berfoto</th><th class="r">Terverifikasi</th><th class="r" title="Ada teks, tapi SID/nomor/nama customer ini tidak terbaca">Belum cocok</th><th class="r" title="Hampir tidak ada teks di foto">Tidak terbaca</th><th class="r" title="Terbaca SID atau nomor customer lain">Data customer lain</th></tr></thead><tbody>${RUN.res.map(x=>{const c=x.sum.c,ocr=c[1]+c[2]+c[3]+c[4];
   return `<tr><td><b>${esc(x.pn)}</b></td><td>${ml(x.ym)}</td><td class="r">${num(x.sum.n)}</td><td class="r"><b>${ocr?Math.round(c[1]/ocr*100):0}%</b> <span class="muted">(${num(c[1])})</span></td><td class="r">${num(c[2])}</td><td class="r">${num(c[3])}</td><td class="r ${c[4]?"bad":""}">${num(c[4])}</td></tr>`;}).join("")}</tbody></table></div>
   ${fl.length?`<div class="ch" style="margin:16px 0 0"><h2 style="font-size:14px">Foto berisi data customer lain</h2><span class="sub">perlu dicek · klik foto untuk memperbesar</span></div><div class="gal">${fl.slice(0,24).map(f=>`<figure><img src="${CROPU.get(f[5])}" alt="" data-zoom="1"><figcaption><b>${esc(f[0])}</b> · ${ml(f[1])}<br>${esc(f[2])} ${esc(f[3]||"")}<br><span class="bad">terbaca ${esc(f[6])}</span></figcaption></figure>`).join("")}</div>${fl.length>24?`<div class="muted" style="margin-top:6px">dan ${fl.length-24} lainnya; semuanya ada di tab Kontak dashboard.</div>`:""}`:""}
+  ${dtBox()}
   ${D?`<div class="muted" style="margin-top:10px">Rincian per customer ada di tab Kontak dashboard Team E.</div>`:""}`;
+ box.querySelectorAll("img[data-dh]").forEach(async im=>{const u=CROPU.get(im.dataset.dh)||await cropUrl(im.dataset.dh);if(u)im.src=u;else im.replaceWith(document.createTextNode("–"));});
  $("#resCard").hidden=false;$("#sync").hidden=!D;}
 
+/* ---------- Contacted Time vs the date in the photo ---------- */
+function dtBox(){const rs=RUN.res.filter(x=>x.sum.tmCol);if(!rs.length)return `<div class="muted" style="margin-top:12px">Kolom Contacted Time tidak ada di sheet yang dibaca, jadi tanggal di foto tidak dicocokkan.</div>`;
+ const fl=rs.flatMap(x=>x.sum.dflag.map(f=>[x.pn,x.ym].concat(f)));
+ return `<div class="ch" style="margin:18px 0 0"><h2 style="font-size:14px">Cek Contacted Time</h2><span class="sub">tanggal di foto bukti dibandingkan dengan kolom Contacted Time</span></div>
+ <div class="tw"><table><thead><tr><th>Sales</th><th>Bulan</th><th class="r" title="Tanggal di foto sama dengan Contacted Time">Sama</th><th class="r" title="Beda satu hari (misalnya chat lewat tengah malam)">Selisih 1 hari</th><th class="r" title="Tanggal di foto jauh dari Contacted Time">Beda</th><th class="r" title="Foto hanya menulis jam, Hari ini/Today, atau tidak ada tanggal">Tanpa tanggal di foto</th><th class="r" title="Contacted bulan ini, tetapi Contacted Time dari bulan sebelumnya">Tanggal bulan lalu</th><th class="r" title="Contacted, tetapi Contacted Time kosong">Kosong</th></tr></thead><tbody>${rs.map(x=>{const d=x.sum.dt;
+  return `<tr><td><b>${esc(x.pn)}</b></td><td>${ml(x.ym)}</td><td class="r">${num(d[1])}</td><td class="r">${num(d[2])}</td><td class="r ${d[3]?"bad":""}">${num(d[3])}</td><td class="r">${num(d[4])}</td><td class="r ${x.sum.old?"bad":""}">${num(x.sum.old)}</td><td class="r ${x.sum.noTm?"bad":""}">${num(x.sum.noTm)}</td></tr>`;}).join("")}</tbody></table></div>
+ ${fl.length?`<div class="ch" style="margin:14px 0 0"><h2 style="font-size:14px">Tanggal di foto beda dengan Contacted Time</h2><span class="sub">perlu dicek · klik foto untuk memperbesar</span></div><div class="gal">${fl.slice(0,24).map(f=>`<figure><img data-dh="${f[6]}" alt="" data-zoom="1"><figcaption><b>${esc(f[0])}</b> · ${ml(f[1])}<br>${esc(f[2])} ${esc(f[3]||"")}<br>Contacted Time <b>${esc(dLong(f[4]))}</b><br><span class="bad">di foto ${esc(dLong(f[5]))}</span></figcaption></figure>`).join("")}</div>${fl.length>24?`<div class="muted" style="margin-top:6px">dan ${fl.length-24} lainnya; semuanya ada di tab Kontak dashboard dan di file Excel.</div>`:""}`:""}`;}
+const dtTxt=(tm,dc,dd,ym,con)=>{if(!tm)return con?"Contacted Time kosong":"";const old=ym&&tm.slice(0,7)<ym?` · Contacted Time dari bulan lalu`:"";
+ if(dc===1)return `✓ Sama (${dLong(dd)})${old}`;if(dc===2)return `Selisih 1 hari (foto ${dLong(dd)})${old}`;if(dc===3)return `Beda: foto ${dLong(dd)}, Contacted Time ${dLong(tm)}${old}`;if(dc===4)return `Tanpa tanggal di foto${old}`;return old?old.slice(3):"";};
 /* ---------- export / import ---------- */
 async function mergePacks(ids){const heads=[],imgs=[],seen=new Set();let months=new Set(),people=new Set(),rows=0;
  for(const id of ids){const r=await FT.store.get(id);if(!r)continue;const o=await FT.open(new Uint8Array(r.bytes),PW);heads.push(o.head);(o.meta.months||[]).forEach(m=>months.add(m));(o.meta.people||[]).forEach(m=>people.add(m));
@@ -672,7 +715,7 @@ async function makeExcel(){const st=$("#xlSt"),own=$("#xlOwn").checked,mode=$("#
    for(const s of list){const pn=s.who,allSids=new Set(),p9map=new Map();allSids.names=new Map();SHEETS.filter(o=>o.who===pn).forEach(o=>o.recs.forEach((r,sid)=>{allSids.add(sid);if(r.name)allSids.names.set(sid,r.name);if(r.p9){let a=p9map.get(r.p9);if(!a)p9map.set(r.p9,a=new Set());a.add(sid);}}));
     const dp=D&&D.people.find(x=>x.n===pn);if(dp)dp.ids.forEach(x=>allSids.add(x));const rows=[];
     s.recs.forEach((r,sid)=>{const fl=decF(r.f),ct=!!(fl&&(fl.ct===1||fl.pc===1||fl.wa===1||fl.cr===1)),m=s.want.get(sid),x=m&&s.hashed.get(m),h=x&&x.h,tx=h?KN.get(h):null;let code=null,oth="";if(h&&tx)[code,oth]=FT.codeOf(tx,sid,r.p9,r.name,allSids,p9map);
-     const cg=CM.get(s).get(sid);rows.push({sid,name:r.name,ph:r.ph||"",h:cg&&cg.k==="del"?cg.h:h,code:h?(tx?code:-1):null,oth,ct,cg});});
+     const cg=CM.get(s).get(sid),[dc,dd]=h&&tx?FT.dateCheck(tx,r.tm):[0,""];rows.push({sid,name:r.name,ph:r.ph||"",h:cg&&cg.k==="del"?cg.h:h,code:h?(tx?code:-1):null,oth,ct,cg,tm:r.tm||"",dt:dtTxt(r.tm||"",dc,dd,s.ym,ct),dbad:dc===3||(!!r.tm&&r.tm.slice(0,7)<s.ym&&ct)||(ct&&!r.tm&&s.cols&&s.cols.tm>=0)});});
     CM.get(s).forEach(cg=>{if(cg.k!=="gone")return;const pe=PREV.get(pn+"|"+s.ym);rows.push({sid:cg.sid,name:(pe&&pe.nm.get(cg.sid))||nameOf(pn,cg.sid),ph:"",h:cg.h,code:null,oth:"",ct:false,cg});});
     groups.push({pn,ym:s.ym,src:`${s.F.file.name} › ${s.name}`,rows});}}
   else if(PACKS.length){
@@ -681,16 +724,17 @@ async function makeExcel(){const st=$("#xlSt"),own=$("#xlOwn").checked,mode=$("#
    let k=0;for(const pk of PACKS){k++;if(ym&&!(pk.meta.months||[]).includes(ym))continue;st.textContent=`Membuka cadangan foto ${k}/${PACKS.length}…`;await tick();const o=await open(pk);if(!o)continue;
     const names=new Map();(o.head.sheets||[]).forEach(sh=>{if(sh.data&&sh.data.recs)sh.data.recs.forEach(x=>names.set(sh.pn+"|"+x[0],x[1]));});
     for(const sh of (o.head.sheets||[])){if(ym&&sh.ym!==ym)continue;const key=sh.pn+"|"+sh.ym;let g=by.get(key);if(!g){g={pn:sh.pn,ym:sh.ym,src:"cadangan foto (.tefoto)",m:new Map()};by.set(key,g);}
-     for(const r of sh.rows){const [sid,h,,code,oth]=r;needH.add(h);g.m.set(sid,{sid,name:names.get(sh.pn+"|"+sid)||nameOf(sh.pn,sid),ph:"",h,code,oth,ct:true});}}}
+     const tms=new Map();(o.head.sheets||[]).forEach(q=>{if(q.pn===sh.pn&&q.ym===sh.ym&&q.data&&q.data.recs)q.data.recs.forEach(x=>tms.set(x[0],x[4]||""));});
+     for(const r of sh.rows){const [sid,h,,code,oth,,,dc,dd]=r,tm=tms.get(sid)||(g.m.get(sid)||{}).tm||"";needH.add(h);g.m.set(sid,{sid,name:names.get(sh.pn+"|"+sid)||nameOf(sh.pn,sid),ph:"",h,code,oth,ct:true,tm,dt:dtTxt(tm,dc||0,dd||"",sh.ym,true),dbad:dc===3||(!!tm&&tm.slice(0,7)<sh.ym)});}}}
    /* photos live in the pack of the month they were first used, so look through every pack */
    k=0;for(const pk of PACKS){k++;st.textContent=`Mengambil foto ${k}/${PACKS.length} · ${num(media.size)}/${num(needH.size)}…`;await tick();const o=await open(pk);if(!o)continue;const img=o.head.img||{};let n=0;
     for(const h in img){if(!needH.has(h)||media.has(h))continue;const [off,len]=img[h];await addImg(h,new Blob([o.body.slice(o.base+off,o.base+off+len)],{type:"image/webp"}),520);if(++n%25===0){st.textContent=`Mengambil foto ${k}/${PACKS.length} · ${num(media.size)}/${num(needH.size)}…`;await tick();}}}
    by.forEach(g=>groups.push({pn:g.pn,ym:g.ym,src:g.src,rows:[...g.m.values()]}));}
   else{st.textContent="Pilih file Customer Background di langkah 1, atau muat cadangan .tefoto dulu.";return;}
   /* sheets: one per sales-month */
-  const H=["No","SID","Nama","No HP","Foto","Status"],W=[5,13,24,16,31,34],BOXW=196,BOXH=150,ROWH=118;const sheets=[],sum=[];
+  const H=["No","SID","Nama","No HP","Foto","Status","Contacted Time","Cek tanggal"],W=[5,13,24,16,31,34,14,30],BOXW=196,BOXH=150,ROWH=118;const sheets=[],sum=[];
   groups.sort((a,b)=>a.pn<b.pn?-1:a.pn>b.pn?1:a.ym<b.ym?-1:a.ym>b.ym?1:0);
-  for(const g of groups){const hasN=g.rows.some(r=>r.name),hasP=g.rows.some(r=>r.ph),keep=[true,true,hasN,hasP,true,true],pick=a=>a.filter((_,i)=>keep[i]),fc=pick([0,1,2,3,4,5]).indexOf(4),last=keep.filter(Boolean).length-1;
+  for(const g of groups){const hasN=g.rows.some(r=>r.name),hasP=g.rows.some(r=>r.ph),hasT=g.rows.some(r=>r.tm||r.dt),keep=[true,true,hasN,hasP,true,true,hasT,hasT],pick=a=>a.filter((_,i)=>keep[i]),fc=pick([0,1,2,3,4,5,6,7]).indexOf(4),last=keep.filter(Boolean).length-1;
    const rows=g.rows.map(r=>{let tx,s,k;
     if(r.cg){tx="Perlu dicek: "+chgTxt(r.cg)+(r.cg.k==="del"||r.cg.k==="gone"?" (foto = bukti lama)":"");s=S.bad;k=0;}
     else if(r.h==null){if(r.ct){tx="Perlu dicek: contacted tanpa foto";s=S.bad;k=0;}else{tx="–";s=S.mute;k=3;}}
@@ -700,7 +744,7 @@ async function makeExcel(){const st=$("#xlSt"),own=$("#xlOwn").checked,mode=$("#
     else if(r.code===2&&r.oth){tx=`Perlu dicek: nomor di foto terdaftar di customer lain (${r.oth}); nomor HP customer ini kosong, mungkin nomor kedua`;s=S.bad;k=0;}
     else if(r.code===2){tx="Perlu dicek: SID/nomor/nama tidak terbaca";s=S.bad;k=0;}
     else{tx="Perlu dicek: foto buram/tanpa teks";s=S.bad;k=0;}
-    if(r.h!=null&&!dim.has(r.h)&&k!==0)tx+=" (foto tidak bisa ditampilkan)";return {k,h:r.h,c:pick([0,{v:r.sid,s:S.text},{v:r.name,s:S.wrap},{v:r.ph,s:S.text},{v:"",s:S.wrap},{v:tx,s}])};});
+    if(r.h!=null&&!dim.has(r.h)&&k!==0)tx+=" (foto tidak bisa ditampilkan)";return {k,h:r.h,c:pick([0,{v:r.sid,s:S.text},{v:r.name,s:S.wrap},{v:r.ph,s:S.text},{v:"",s:S.wrap},{v:tx,s},{v:r.tm?dLong(r.tm):"",s:S.text},{v:r.dt||"",s:r.dbad?S.bad:r.dt&&r.dt.startsWith("✓")?S.good:S.wrap}])};});
    rows.sort((a,b)=>a.k-b.k);const cnt={n:rows.length,foto:rows.filter(r=>r.h!=null).length,ok:rows.filter(r=>r.k===2).length,chk:rows.filter(r=>r.k===0).length,unread:rows.filter(r=>r.k===1).length};
    const pics=[];rows.forEach((r,i)=>{r.c[0]={v:i+1,s:S.num};if(r.h!=null&&dim.has(r.h)){const [w,hh]=dim.get(r.h),sc=Math.min(BOXW/w,BOXH/hh);pics.push({r:i+2,c:fc,key:r.h,w:Math.round(w*sc),h:Math.round(hh*sc),alt:r.c[1].v});}});
    const cl=XLW.colL;sheets.push({name:`${g.pn} ${ml(g.ym)}`,cols:pick(W),rows:[{h:24,c:[{v:`${g.pn} · ${ml(g.ym)}`,s:S.title},{v:"",s:S.def},{v:`Sumber: ${g.src}`,s:S.note}]},{h:24,c:pick(H).map(v=>({v,s:S.head}))}].concat(rows.map(r=>({h:r.h!=null&&dim.has(r.h)?ROWH:20,c:r.c}))),
