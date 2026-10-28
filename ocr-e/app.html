@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta name="app-version" content="26.10.27-5">
+<meta name="app-version" content="26.10.28-1">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cek Foto Bukti · Team E</title>
@@ -110,7 +110,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
    <div class="row"><div id="packs" class="muted"></div><span style="flex:1"></span><button id="expAll">⬇ Simpan .tefoto</button><label class="btn">⬆ Muat .tefoto…<input type="file" id="impIn" accept=".tefoto" multiple hidden></label></div>
    <div class="muted" id="impSt"></div></section>
  </main>
- <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.27-5</div>
+ <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.28-1</div>
 </div>
 <script>/*@A:fflate-c3b34f2e9f5e.txt@*/</script>
 <script>/*@A:tess-a8e29918d098.txt@*/</script>
@@ -430,14 +430,14 @@ function sheetChanges(s){if(!s.who||!/^\d{4}-\d{2}$/.test(s.ym)||!s.hashed)retur
  const dF=new Map();if(dsh)dsh.rows.forEach(r=>{dF.set(dp.ids[r[0]],[r[2],0]);});
  const prevPh=e?e.ph:new Map();if(dsh&&!e)dsh.rows.forEach(r=>{if(r.length>3&&r[3]!=null&&r[3]>=0&&dp.img[r[3]])prevPh.set(dp.ids[r[0]],[dp.img[r[3]][0],0]);});
  const prevF=e&&e.fl.size?e.fl:dF;
- prevPh.forEach(([h,at],sid)=>{const rec=s.recs.get(sid);if(!rec){out.push({sid,k:"gone",h,at});return;}const m=s.want.get(sid),x=m&&s.hashed.get(m);
+ const fix=s.mode==="fix";prevPh.forEach(([h,at],sid)=>{const rec=s.recs.get(sid);if(!rec){if(!fix)out.push({sid,k:"gone",h,at});return;}const m=s.want.get(sid),x=m&&s.hashed.get(m);
   if(!x)out.push({sid,k:"del",h,at});else if(x.h!==h)out.push({sid,k:"rep",h,cur:x.h,at});});
  prevF.forEach(([f,at],sid)=>{const rec=s.recs.get(sid);if(!rec||f==null||f<0||rec.f<0)return;const a=decF(f),b=decF(rec.f),ca=a.ct===1||a.pc===1||a.wa===1||a.cr===1,cb=b.ct===1||b.pc===1||b.wa===1||b.cr===1;
-  if(ca&&!cb){out.push({sid,k:"unc",at});return;}const lost=[a.pc,a.wa,a.cr].map((v,i)=>v===1&&[b.pc,b.wa,b.cr][i]!==1?CHN[i]:null).filter(Boolean);if(cb&&lost.length)out.push({sid,k:"chn",lost,at});});
+  if(ca&&!cb){out.push({sid,k:"unc",at});return;}if(fix&&!ca&&cb){out.push({sid,k:"con",at});return;}const lost=[a.pc,a.wa,a.cr].map((v,i)=>v===1&&[b.pc,b.wa,b.cr][i]!==1?CHN[i]:null).filter(Boolean);if(cb&&lost.length)out.push({sid,k:"chn",lost,at});});
  /* Contacted Time edited after the last check (only when the sheet has the column) */
  if(e&&e.tm&&s.cols&&s.cols.tm>=0)e.tm.forEach(([was,at],sid)=>{const rec=s.recs.get(sid);if(!rec)return;const now=rec.tm||"";if(was!==now)out.push({sid,k:"tm",lost:[was,now],at});});
  return out;}
-const CHGL={gone:"customer hilang dari sheet",del:"foto bukti dihapus",rep:"foto bukti diganti",unc:"contacted diubah jadi uncontacted",chn:"channel dicabut",tm:"Contacted Time diubah"};
+const CHGL={con:"uncontacted diubah jadi contacted",gone:"customer hilang dari sheet",del:"foto bukti dihapus",rep:"foto bukti diganti",unc:"contacted diubah jadi uncontacted",chn:"channel dicabut",tm:"Contacted Time diubah"};
 const dLong=v=>{if(!v)return "kosong";const d=new Date(v+"T00:00:00");return isNaN(d)?v:`${d.getDate()} ${MN[d.getMonth()]} ${d.getFullYear()}`;};
 const chgTxt=c=>`${c.k==="chn"?`channel ${c.lost.join("+")} dicabut`:c.k==="tm"?`Contacted Time diubah dari ${dLong(c.lost[0])} ke ${dLong(c.lost[1])}`:CHGL[c.k]} setelah dicek${c.at?" "+dShort(c.at):""}`;
 
@@ -532,18 +532,21 @@ function F_sort(){SHEETS.forEach(s=>{if(s.on==null)s.on=false;});}
 async function hashSheet(s){if(s.hashed)return;const medias=new Set(s.want.values()),z=unz(s.F,n=>medias.has(n)),h=new Map();let k=0;
  for(const m of medias){if(!z[m])continue;h.set(m,{h:await sha16(z[m]),mime:/\.png$/i.test(m)?"image/png":/\.gif$/i.test(m)?"image/gif":/\.webp$/i.test(m)?"image/webp":/\.bmp$/i.test(m)?"image/bmp":"image/jpeg"});if(++k%50===0)await tick();}
  s.hashed=h;s.newN=[...h.values()].filter(x=>!KN.has(x.h)).length;}
+function prevN(pn,ym){const e=PREV.get(pn+"|"+ym);let n=e?Math.max(e.fl.size,e.ph.size):0;if(D){const p=D.people.find(x=>x.n===pn),sh=p&&p.sheets.find(x=>x.ym===ym&&x.use!==0);if(sh)n=Math.max(n,sh.rows.length);}return n;}
+function autoMode(s){if(s.modeSet||!s.who||!s.ym)return;const n=prevN(s.who,s.ym);s.mode=n>0&&s.recs.size<n*0.5?"fix":"all";}
 function inDash(pn,ym){if(!D)return false;const p=D.people.find(x=>x.n===pn);return !!(p&&p.sheets.some(x=>x.ym===ym&&x.use!==0));}
 
 /* ---------- render ---------- */
 function renderSheets(){try{xlSrc();}catch(e){}const box=$("#sheets");if(!SHEETS.length){box.innerHTML="";$("#go").disabled=true;$("#selInfo").textContent="";return;}
- box.innerHTML=`<div class="tw"><table><thead><tr><th style="width:28px"></th><th>Sheet</th><th>Sales</th><th>Bulan</th><th class="r">Foto</th><th>Status</th></tr></thead><tbody>${SHEETS.map((s,i)=>{
-  if(s.hashed&&s.who&&s.ym)s.chg=sheetChanges(s);const cg=s.chg&&s.chg.length?`<span class="tag bad" title="Dibanding pembacaan sebelumnya">⚠ ${num(s.chg.length)} berubah sejak dicek</span>`:"";
+ box.innerHTML=`<div class="tw"><table><thead><tr><th style="width:28px"></th><th>Sheet</th><th>Sales</th><th>Bulan</th><th>Isi file</th><th class="r">Foto</th><th>Status</th></tr></thead><tbody>${SHEETS.map((s,i)=>{
+  autoMode(s);if(s.hashed&&s.who&&s.ym)s.chg=sheetChanges(s);const cg=s.chg&&s.chg.length?`<span class="tag bad" title="Dibanding pembacaan sebelumnya">⚠ ${num(s.chg.length)} berubah sejak dicek</span>`:"";
   const st=!s.nImg?`<span class="tag none">Tanpa foto</span>`:s.newN==null?`<span class="tag none">Memeriksa…</span>`:s.newN?`<span class="tag new">${num(s.newN)} foto baru</span>`:`<span class="tag done">✓ Sudah dibaca semua</span>`;
-  const d=s.nImg&&s.who&&s.ym?(inDash(s.who,s.ym)?` <span class="tag info" title="Bulan ini sudah ada di dashboard; hanya hasil foto yang ditambahkan">Sudah ada di dashboard</span>`:` <span class="tag info" title="Bulan ini belum ada di dashboard; datanya ikut ditambahkan">Bulan baru</span>`):"";
+  const d=s.mode==="fix"?` <span class="tag info" title="Hanya customer di file ini yang diperbarui; customer lain tetap seperti hasil cek sebelumnya">Perbaikan</span>`:s.nImg&&s.who&&s.ym?(inDash(s.who,s.ym)?` <span class="tag info" title="Bulan ini sudah ada di dashboard; hanya hasil foto yang ditambahkan">Sudah ada di dashboard</span>`:` <span class="tag info" title="Bulan ini belum ada di dashboard; datanya ikut ditambahkan">Bulan baru</span>`):"";
   return `<tr class="${s.nImg?"":"off"}${s.on?" sel":""}"><td><input type="checkbox" data-on="${i}"${s.on?" checked":""}${s.nImg?"":" disabled"} aria-label="Pilih sheet ${esc(s.name)}"></td>
    <td><div class="sn" title="${esc(s.name)}">${esc(s.name)}</div><span class="fn" title="${esc(s.F.file.name)}">${esc(s.F.file.name)} · ${num(s.recs.size)} customer</span></td>
    <td><select data-who="${i}" aria-label="Sales"><option value="">Pilih sales</option>${PEOPLE.map(p=>`<option${p===s.who?" selected":""}>${esc(p)}</option>`).join("")}</select></td>
-   <td><input type="month" data-ym="${i}" value="${s.ym}" aria-label="Bulan"></td><td class="r">${num(s.nImg)}</td><td class="stc">${cg}${st}${d}</td></tr>`;}).join("")}</tbody></table></div>`;
+   <td><input type="month" data-ym="${i}" value="${s.ym}" aria-label="Bulan"></td>
+   <td><select data-mode="${i}" aria-label="Isi file" title="Hanya perbaikan: customer yang tidak ada di file ini dibiarkan seperti hasil cek sebelumnya"><option value="all"${s.mode!=="fix"?" selected":""}>Semua customer</option><option value="fix"${s.mode==="fix"?" selected":""}>Hanya perbaikan</option></select>${s.mode==="fix"&&s.who&&s.ym?`<div class="fn">${num(s.recs.size)} dari ${num(prevN(s.who,s.ym))} customer diperbarui</div>`:""}</td><td class="r">${num(s.nImg)}</td><td class="stc">${cg}${st}${d}</td></tr>`;}).join("")}</tbody></table></div>`;
  const sel=SHEETS.filter(s=>s.on);$("#go").disabled=!sel.length||!!RUN;
  $("#selInfo").textContent=sel.length?`${sel.length} sheet dipilih · ${num(sel.reduce((a,s)=>a+(s.newN==null?s.nImg:s.newN),0))} foto baru${sel.some(s=>!s.who||!s.ym)?" · lengkapi sales dan bulan":""}`:"Centang sheet yang mau dibaca di langkah 1";
  hashPending();}
@@ -607,7 +610,7 @@ async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.n
  const data={t:`${s.F.file.name.replace(/\.xlsx$/i,"")} · ${s.name}`,recs:[...s.recs].map(([sid,r])=>[sid,r.name,r.vip,r.f,r.tm||""]),tmCol:s.cols&&s.cols.tm>=0?1:0};
  let chunk={rows:[],imgs:[],tx:{}},first=true,sum={n:0,c:[0,0,0,0,0],flag:[],dt:[0,0,0,0,0],dflag:[],old:0,noTm:0,tmCol:s.cols&&s.cols.tm>=0};const flush=async(final)=>{if(!chunk.rows.length&&!first)return;
   const c=chunk,isFirst=first;chunk={rows:[],imgs:[],tx:{}};first=false;
-  const head={sheets:[Object.assign({pn,ym,t:data.t,data:isFirst?data:null,rows:c.rows,at:RUNAT},isFirst&&CHG.length?{chg:CHG.map(x=>[x.sid,x.k,x.h||"",x.at||0,x.lost||null])}:{})],tx:c.tx};const id=`E-${ym}-${pn}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+  const head={sheets:[Object.assign({pn,ym,t:data.t,data:isFirst?data:null,rows:c.rows,at:RUNAT},s.mode==="fix"?{fix:1}:{},isFirst&&CHG.length?{chg:CHG.map(x=>[x.sid,x.k,x.h||"",x.at||0,x.lost||null])}:{})],tx:c.tx};const id=`E-${ym}-${pn}-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
   const bytes=await FT.seal(head,c.imgs,{id,made:Date.now(),months:[ym],people:[pn],rows:c.rows.length,src:"Alat Cek Foto"},PW);
   await FT.store.put({id,meta:FT.meta(bytes),bytes:bytes.buffer,at:Date.now()});SESSION.push(id);PACKS.push({id,meta:FT.meta(bytes),size:bytes.length,at:Date.now()});
   try{FT.ch&&FT.ch.postMessage({t:"pack",id});}catch(e){}renderPacks();void final;};
@@ -781,7 +784,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  const dz=$("#drop");["dragenter","dragover"].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.add("over");}));["dragleave","drop"].forEach(t=>dz.addEventListener(t,e=>{e.preventDefault();dz.classList.remove("over");}));
  dz.addEventListener("drop",e=>{if(e.dataTransfer&&e.dataTransfer.files.length)addFiles([...e.dataTransfer.files]);});
  $("#fileIn").addEventListener("change",e=>{addFiles([...e.target.files]);e.target.value="";});
- $("#sheets").addEventListener("change",e=>{const t=e.target;if(t.dataset.on!=null){SHEETS[+t.dataset.on].on=t.checked;}else if(t.dataset.who!=null){SHEETS[+t.dataset.who].who=t.value;SHEETS[+t.dataset.who].chgDone=null;}else if(t.dataset.ym!=null){SHEETS[+t.dataset.ym].ym=t.value;SHEETS[+t.dataset.ym].chgDone=null;}renderSheets();});
+ $("#sheets").addEventListener("change",e=>{const t=e.target;if(t.dataset.on!=null){SHEETS[+t.dataset.on].on=t.checked;}else if(t.dataset.who!=null){SHEETS[+t.dataset.who].who=t.value;SHEETS[+t.dataset.who].chgDone=null;}else if(t.dataset.ym!=null){SHEETS[+t.dataset.ym].ym=t.value;SHEETS[+t.dataset.ym].chgDone=null;}else if(t.dataset.mode!=null){const x=SHEETS[+t.dataset.mode];x.mode=t.value;x.modeSet=true;x.chgDone=null;}renderSheets();});
  $("#go").addEventListener("click",start);
  $("#pause").addEventListener("click",()=>{if(!RUN)return;RUN.paused=!RUN.paused;$("#pause").textContent=RUN.paused?"Lanjutkan":"Jeda";$("#pgEta").textContent=RUN.paused?"dijeda":eta();});
  document.addEventListener("click",e=>{const z=e.target.closest&&e.target.closest("img[data-zoom]");if(z){const lb=document.createElement("div");lb.className="lb";lb.innerHTML=`<img src="${z.src}" alt="">`;const im=lb.firstChild;if(z.naturalWidth&&z.naturalWidth<700)im.style.width=Math.min(z.naturalWidth*1.8,window.innerWidth*.96)+"px";lb.onclick=()=>lb.remove();document.body.appendChild(lb);}});
