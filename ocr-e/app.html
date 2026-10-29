@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta name="app-version" content="26.10.29-6">
+<meta name="app-version" content="26.10.29-7">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cek Foto Bukti · Team E</title>
@@ -103,7 +103,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
   <section class="card"><div class="ch"><span class="num">2</span><h2>Baca foto</h2><span class="sub" id="selInfo"></span></div>
    <div class="row"><button class="pri" id="go" disabled>Mulai baca foto</button><button id="pause" hidden>Jeda</button>
     <label class="spd">Kecepatan <select id="nw" aria-label="Kecepatan baca"></select></label>
-    <label class="spd" title="Foto bukti yang disimpan untuk tab Kontak dashboard. Original: warna dan ukuran asli, lebih jelas tapi lebih besar (browser dan file .tefoto ikut membesar). Kecil: potongan abu-abu di sekitar data customer, hemat tempat.">Foto bukti disimpan <select id="keep" aria-label="Ukuran foto bukti"><option value="small">Kecil (hemat)</option><option value="orig">Original (ukuran asli)</option></select></label></div>
+    <label class="spd" title="Foto bukti yang disimpan untuk tab Kontak dashboard. Otomatis: foto yang bermasalah (belum cocok, data customer lain, tanggal beda, atau diubah setelah dicek) disimpan original supaya jelas; foto yang sudah cocok disimpan kecil supaya hemat.">Foto bukti disimpan <select id="keep" aria-label="Ukuran foto bukti"><option value="auto">Otomatis: bermasalah original, lainnya kecil</option><option value="small">Semua kecil (paling hemat)</option><option value="orig">Semua original</option></select></label></div>
    <div class="prog" id="prog" hidden><div class="big"><b id="pgN">0 / 0 foto</b><span id="pgEta"></span></div><div class="bar"><i id="bar"></i></div><div class="muted" id="runSt" role="status"></div></div>
    <div class="muted" style="margin-top:8px">Biarkan tab ini terbuka sampai selesai. Kalau terputus, jalankan lagi; bacaan lanjut dari foto yang belum dibaca.</div></section>
 
@@ -122,7 +122,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
    <div class="row"><div id="packs" class="muted"></div><span style="flex:1"></span><button id="expAll">⬇ Simpan .tefoto</button><label class="btn">⬆ Muat .tefoto…<input type="file" id="impIn" accept=".tefoto" multiple hidden></label></div>
    <div class="muted" id="impSt"></div></section>
  </main>
- <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.29-6</div>
+ <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.29-7</div>
 </div>
 <script>/*@A:fflate-c3b34f2e9f5e.txt@*/</script>
 <script>/*@A:tess-a8e29918d098.txt@*/</script>
@@ -411,7 +411,10 @@ const MN=["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des
 const num=n=>Number(n).toLocaleString("id-ID");
 let PW=null,D=null,PEOPLE=DEF_PEOPLE.slice();
 const KN=new Map();           /* hash -> tx facts, for photos already read and stored in a pack */
-const HLM=new Map();          /* sid|hash -> [box in crop, box in full photo, matched text] */
+const HLM=new Map(),KK=new Map();   /* KK: hash -> 'o' when the stored proof photo is the original */
+/* which photo to keep: the original for photos with a problem (or always / never, as chosen) */
+const useOrig=bad=>KEEP()==='orig'||(KEEP()==='auto'&&bad);
+const isBad=(rows,chgS)=>rows.some(r=>r[3]!==1||r[7]===3||(chgS&&chgS.has(r[0])));          /* sid|hash -> [box in crop, box in full photo, matched text] */
 let PACKS=[];                 /* metas of packs in this browser */
 const FILES=[];               /* {file,u8,ss,sheets:[{name,path,...}]} */
 let SHEETS=[];                /* candidate sheets */
@@ -443,8 +446,8 @@ async function unlock(ev){ev.preventDefault();const pw=$("#pw").value,err=$("#lo
  err.textContent="Memuat foto yang sudah pernah dibaca…";await loadKnown(recs);
  $("#lock").hidden=true;$("#main").hidden=false;renderPacks();renderSheets();
  const wh=$("#who");wh.classList.toggle("off",!D);wh.innerHTML=D?`<i></i>Terhubung dengan dashboard Team E di Chrome ini (${PEOPLE.length} sales). Hasil akan masuk otomatis.`:`<i></i>Belum terhubung dengan tab Kontak dashboard Team E di Chrome ini. Hasil tetap tersimpan di sini dan bisa dijadikan Excel atau cadangan .tefoto.`;}
-async function loadKnown(recs){KN.clear();HLM.clear();PACKS=[];PREV.clear();HIDX.clear();const heads=[];for(const r of recs){const u8=new Uint8Array(r.bytes),meta=r.meta||FT.meta(u8);PACKS.push({id:r.id,meta,size:u8.length,at:r.at});
-  try{const o=await FT.open(u8,PW),txm=o.head.tx||{};Object.keys(o.head.img||{}).forEach(h=>{if(txm[h])KN.set(h,txm[h]);if(!HIDX.has(h))HIDX.set(h,r.id);});heads.push([meta.made||0,o.head]);}catch(e){}}
+async function loadKnown(recs){KN.clear();HLM.clear();KK.clear();PACKS=[];PREV.clear();HIDX.clear();const heads=[];for(const r of recs){const u8=new Uint8Array(r.bytes),meta=r.meta||FT.meta(u8);PACKS.push({id:r.id,meta,size:u8.length,at:r.at});
+  try{const o=await FT.open(u8,PW),txm=o.head.tx||{};Object.entries(o.head.img||{}).forEach(([h,v])=>{if(txm[h])KN.set(h,txm[h]);if(!HIDX.has(h))HIDX.set(h,r.id);KK.set(h,v&&v[4]==='o'?'o':'c');});heads.push([meta.made||0,o.head]);}catch(e){}}
  PACKS.sort((a,b)=>(a.meta.made||0)-(b.meta.made||0));
  heads.sort((a,b)=>a[0]-b[0]).forEach(([made,h])=>(h.sheets||[]).forEach(sx=>{const key=sx.pn+"|"+sx.ym;let e=PREV.get(key);if(!e)PREV.set(key,e={ph:new Map(),fl:new Map(),nm:new Map(),tm:new Map(),at:0,flAt:0});
   (sx.rows||[]).forEach(r=>{e.ph.set(r[0],[r[1],sx.at||made]);if(r[6]||r[9])HLM.set(r[0]+"|"+r[1],[r[6]||null,r[9]||null,r[10]||""]);});e.at=Math.max(e.at,sx.at||made);if(sx.data&&sx.data.recs){sx.data.recs.forEach(x=>{e.fl.set(x[0],[x[3],sx.at||made]);if(x[1])e.nm.set(x[0],x[1]);if(sx.data.tmCol)e.tm.set(x[0],[x[4]||"",sx.at||made]);});e.flAt=Math.max(e.flAt,sx.at||made);}}));}
@@ -630,7 +633,7 @@ async function start(){const sel=SHEETS.filter(s=>s.on);if(!sel.length)return;
  RUN=null;renderSheets();renderPacks();}
 function eta(){if(!RUN||!RUN.done)return "";const el=(performance.now()-RUN.t0)/1000,per=el/RUN.done,left=Math.max(0,RUN.total-RUN.done)*per;return left<60?"sisa kurang dari 1 menit":`sisa ±${Math.ceil(left/60)} menit`;}
 async function waitPause(){while(RUN&&RUN.paused&&!RUN.stop)await new Promise(r=>setTimeout(r,250));}
-async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.now(),CHG=sheetChanges(s);st.textContent=`Sedang membaca: ${pn} · ${ml(ym)}`;
+async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.now(),CHG=sheetChanges(s),CHGS=new Set(CHG.map(c=>c.sid));st.textContent=`Sedang membaca: ${pn} · ${ml(ym)}`;
  const medias=new Set(s.want.values()),z=unz(s.F,n=>medias.has(n));
  /* context for verdicts: every SID and phone of this sales in the loaded files + dashboard */
  const allSids=new Set(),p9map=new Map();allSids.names=new Map();SHEETS.filter(o=>o.who===pn).forEach(o=>o.recs.forEach((r,sid)=>{allSids.add(sid);if(r.name)allSids.names.set(sid,r.name);if(r.p9){let a=p9map.get(r.p9);if(!a)p9map.set(r.p9,a=new Set());a.add(sid);}}));
@@ -661,20 +664,24 @@ async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.n
       if(!PDOFF&&miss(tx,m)){
        try{if(!PD.ok)st.textContent="Menyiapkan pembaca kedua (PaddleOCR)…";const w2=await pdRead(o.bm,o.W,o.H);words=words.concat(w2);tx=FT.txOf(words);RUN.pd=(RUN.pd||0)+1;}catch(e){PDOFF=true;RUN.pdErr=String(e&&e.message||e);}}}
       const cr=await makeCrop(o.bm,o.W,o.H,words,sid,r&&r.p9);o.bm.close&&o.bm.close();
-      out={h:x.h,sd:o.sd,tx,cu8:cr.u8,words,box:cr.box,W:o.W,H:o.H};chunk.imgs.push(KEEP()==="orig"?{h:x.h,u8:new Uint8Array(z[m]),w:o.W,ht:o.H,k:"o"}:{h:x.h,u8:cr.u8,w:cr.w,ht:cr.ht,k:cr.k});chunk.tx[x.h]=tx;KN.set(x.h,tx);}catch(e){err++;}
+      out={h:x.h,sd:o.sd,tx,cu8:cr.u8,words,box:cr.box,W:o.W,H:o.H};out.cr=cr;chunk.tx[x.h]=tx;KN.set(x.h,tx);}catch(e){err++;}
      if(out)done.set(m,out);RUN.done++;inflight--;
      /* rows of this photo */
-     if(out)bySid.forEach((mm,sd_)=>{if(mm!==m)return;const rr=s.recs.get(sd_),[code,oth,ev,tok]=FT.codeOf(out.tx,sd_,rr.p9,rr.name,allSids,p9map),hlF0=code===1||code===4?FT.hlBox(out.words,tok,ev,[0,0,out.W,out.H]):null,hl=code===1||code===4?(KEEP()==="orig"?hlF0:FT.hlBox(out.words,tok,ev,out.box)):null,hlF=code===1||code===4?FT.hlBox(out.words,tok,ev,[0,0,out.W,out.H]):null,[dc,dd]=FT.dateCheck(out.tx,rr.tm,rr.name);chunk.rows.push([sd_,out.h,out.sd,code,oth,ev,hl,dc,dd,hlF,tok||""]);if(hl||hlF)HLM.set(sd_+"|"+out.h,[hl,hlF,tok||""]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sd_,rr,out.h,ym,out.cu8);if(code===4){if(!CROPU.has(out.h))CROPU.set(out.h,URL.createObjectURL(new Blob([out.cu8],{type:"image/webp"})));sum.flag.push([sd_,rr.name,code,out.h,oth,hl]);}});
+     if(out){const rs=[];bySid.forEach((mm,sd_)=>{if(mm!==m)return;const rr=s.recs.get(sd_),[code,oth,ev,tok]=FT.codeOf(out.tx,sd_,rr.p9,rr.name,allSids,p9map),hl=code===1||code===4?FT.hlBox(out.words,tok,ev,out.box):null,hlF=code===1||code===4?FT.hlBox(out.words,tok,ev,[0,0,out.W,out.H]):null,[dc,dd]=FT.dateCheck(out.tx,rr.tm,rr.name);rs.push([sd_,out.h,out.sd,code,oth,ev,hl,dc,dd,hlF,tok||""]);});
+      const og=useOrig(isBad(rs,CHGS));chunk.imgs.push(og?{h:x.h,u8:new Uint8Array(z[m]),w:out.W,ht:out.H,k:"o"}:{h:x.h,u8:out.cr.u8,w:out.cr.w,ht:out.cr.ht,k:out.cr.k});KK.set(x.h,og?"o":"c");
+      rs.forEach(row=>{const [sd_,,,code,oth,,hl,dc,dd,hlF,tok]=row,rr=s.recs.get(sd_);if(og)row[6]=hlF;chunk.rows.push(row);if(hl||hlF)HLM.set(sd_+"|"+out.h,[hl,hlF,tok||""]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sd_,rr,out.h,ym,out.cu8);if(code===4){if(!CROPU.has(out.h))CROPU.set(out.h,URL.createObjectURL(new Blob([out.cu8],{type:"image/webp"})));sum.flag.push([sd_,rr.name,code,out.h,oth,hl]);}});}
      const pc=RUN.total?RUN.done/RUN.total*100:100;$("#bar").style.width=pc.toFixed(1)+"%";$("#pgN").textContent=`${num(RUN.done)} / ${num(RUN.total)} foto`;$("#pgEta").textContent=RUN.paused?"dijeda":eta();st.textContent=`Sedang membaca: ${pn} · ${ml(ym)}${RUN.pd?` · ${num(RUN.pd)} foto dibaca ulang dengan pembaca kedua`:""}${err?` · ${err} foto gagal dibaca`:""}${PDOFF?" · pembaca kedua tidak bisa dipakai di browser ini":""}`;
      if(chunk.imgs.length>=120)await flush(false);
      if(qi>=queue.length&&!inflight)resolve();else next();})();}
    if(RUN.paused&&!inflight){waitPause().then(next);}
    if(qi>=queue.length&&!inflight)resolve();};next();});
- /* "Original" chosen: photos read earlier are stored again in full size */
- if(KEEP()==="orig"){const km=new Set();for(const [m,o] of done){if(!o.known||km.has(m)||!z[m])continue;km.add(m);let W=0,H=0;try{const bm=await createImageBitmap(new Blob([z[m]]));W=bm.width;H=bm.height;bm.close&&bm.close();}catch(e){}
-   chunk.imgs.push({h:o.h,u8:new Uint8Array(z[m]),w:W,ht:H,k:"o"});if(chunk.imgs.length>=60)await flush(false);}}
+ /* photos read earlier: store the original again when it is wanted (always, or for a photo with a problem) and not stored yet */
+ {const km=new Set();for(const [m,o] of done){if(!o.known||km.has(m)||!z[m]||KK.get(o.h)==="o")continue;km.add(m);
+   const rs=sidsOf(m).map(q=>{const rr=s.recs.get(q);return [q,o.h,null,FT.codeOf(o.tx,q,rr.p9,rr.name,allSids,p9map)[0],"","",null,FT.dateCheck(o.tx,rr.tm,rr.name)[0]];});if(!useOrig(isBad(rs,CHGS)))continue;
+   let W=0,H=0;try{const bm=await createImageBitmap(new Blob([z[m]]));W=bm.width;H=bm.height;bm.close&&bm.close();}catch(e){}
+   chunk.imgs.push({h:o.h,u8:new Uint8Array(z[m]),w:W,ht:H,k:"o"});KK.set(o.h,"o");if(chunk.imgs.length>=60)await flush(false);}}
  /* rows whose photo was already known */
- bySid.forEach((m,sid)=>{const o=done.get(m);if(!o||!o.known)return;const rr=s.recs.get(sid),[code,oth,ev,tok]=FT.codeOf(o.tx,sid,rr.p9,rr.name,allSids,p9map),[dc,dd]=FT.dateCheck(o.tx,rr.tm,rr.name),hk=HLM.get(sid+"|"+o.h)||[null,null,""];chunk.rows.push([sid,o.h,null,code,oth,ev,code===1||code===4?(KEEP()==="orig"?hk[1]:hk[0]):null,dc,dd,code===1||code===4?hk[1]:null,tok||hk[2]||""]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sid,rr,o.h,ym,null);if(code===4)sum.flag.push([sid,rr.name,code,o.h,oth]);});
+ bySid.forEach((m,sid)=>{const o=done.get(m);if(!o||!o.known)return;const rr=s.recs.get(sid),[code,oth,ev,tok]=FT.codeOf(o.tx,sid,rr.p9,rr.name,allSids,p9map),[dc,dd]=FT.dateCheck(o.tx,rr.tm,rr.name),hk=HLM.get(sid+"|"+o.h)||[null,null,""];chunk.rows.push([sid,o.h,null,code,oth,ev,code===1||code===4?(KK.get(o.h)==="o"?hk[1]:hk[0]):null,dc,dd,code===1||code===4?hk[1]:null,tok||hk[2]||""]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sid,rr,o.h,ym,null);if(code===4)sum.flag.push([sid,rr.name,code,o.h,oth]);});
  /* Contacted Time from an earlier month, or empty although contacted */
  s.recs.forEach((r,sid)=>{const fl=decF(r.f),con=!!(fl&&(fl.ct===1||fl.pc===1||fl.wa===1||fl.cr===1));if(!con||!sum.tmCol)return;if(!r.tm)sum.noTm++;else if(r.tm.slice(0,7)<ym)sum.old++;});
  await flush(true);s.newN=0;
@@ -731,7 +738,7 @@ async function importFiles(list){const st=$("#impSt");let ok=0,bad=0,same=0;for(
 /* ---------- Excel archive: SID, phone, proof photo, what needs checking (password-protected) ---------- */
 const EVN={s:"SID",p:"No HP",n:"nama",f:"nomor"};
 const CODEL=["Tidak terbaca","Terverifikasi","Belum cocok","Tidak terbaca","Data customer lain"],EVL={s:"SID",p:"nomor HP",n:"nama"};
-const KEEP=()=>{try{return localStorage.getItem("ocrKeep")==="orig"?"orig":"small";}catch(e){return "small";}};
+const KEEP=()=>{try{const v=localStorage.getItem("ocrKeep");return v==="orig"||v==="small"?v:"auto";}catch(e){return "auto";}};
 const decF=f=>f<0?null:{ct:f%3,cr:Math.floor(f/3)%3,wa:Math.floor(f/9)%3,pc:Math.floor(f/27)%3};
 async function toJpeg(blob,maxSide,gray){let bm;try{bm=await createImageBitmap(blob);}catch(e){return null;}const sc=Math.min(1,maxSide/Math.max(bm.width,bm.height)),w=Math.max(1,Math.round(bm.width*sc)),h=Math.max(1,Math.round(bm.height*sc));
  const c=document.createElement("canvas");c.width=w;c.height=h;const g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,w,h);if(gray)g.filter="grayscale(1)";g.imageSmoothingQuality="high";g.drawImage(bm,0,0,w,h);bm.close&&bm.close();
