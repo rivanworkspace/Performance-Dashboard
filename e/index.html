@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="te-loader" content="1">
-<meta name="app-version" content="26.10.29-2">
+<meta name="app-version" content="26.10.29-3">
 <title>Team E – Performance Review</title>
 <style>
 :root{--bg:#f5f6fa;--ink:#1d2433;--mute:#667085;--acc:#3b5bdb;--line:#d5d9e4}
@@ -20,6 +20,7 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui
  var S={owner:"rivanworkspace",repo:"Performance-Dashboard",branch:"main",dir:"e",team:"E",ns:"",people:[],sha:null,offline:false};
  var $=function(i){return document.getElementById(i);};
  /* names for tools that need them: built into a private file, or passed in a shared link (#p=…), then kept in this browser */
+ try{var lm=/[#&]lk=([^&]*)/.exec(location.hash);if(lm){S.lark=decodeURIComponent(lm[1]);localStorage.setItem(S.ns+"lark",S.lark);}else S.lark=localStorage.getItem(S.ns+"lark")||"";}catch(e){}
  try{var hm=/[#&]p=([^&]*)/.exec(location.hash);if(hm){S.people=decodeURIComponent(hm[1]).split(",").map(function(x){return x.trim();}).filter(Boolean);localStorage.setItem(S.ns+"people",JSON.stringify(S.people));history.replaceState(null,"",location.pathname+location.search);}
   else if(!S.people.length)S.people=JSON.parse(localStorage.getItem(S.ns+"people")||"[]");}catch(e){}
  S.msg=function(t,sub,stop){$("teMsg").textContent=t;$("teSub").textContent=sub||"";if(stop)$("teSp").style.display="none";};

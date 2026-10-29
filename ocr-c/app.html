@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta name="app-version" content="26.10.28-1">
+<meta name="app-version" content="26.10.29-3">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cek Foto Bukti · Team C</title>
@@ -17,7 +17,13 @@ body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 "Poppins",sy
 [hidden]{display:none!important}
 .hero{background:linear-gradient(115deg,#1E1B4B 0%,#3730A3 55%,#6D28D9 100%);color:#fff;border-radius:14px;padding:12px 18px;margin-bottom:10px;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .hero h1{margin:0;font-size:18px;font-weight:700;letter-spacing:-.01em}.hero p{margin:3px 0 0;opacity:.85;font-size:13px;max-width:560px}
-.pills{display:flex;gap:6px;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);white-space:nowrap}
+.pills{display:flex;gap:6px;flex-wrap:wrap}
+.lkset[hidden]{display:none}
+.lkbar{display:flex;gap:6px;flex-wrap:wrap;flex-basis:100%}
+.lkbar a,.lkbar button{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12.5px;font-weight:600;padding:5px 12px;border-radius:999px;background:#fff;color:#3730A3;border:0;text-decoration:none;cursor:pointer}
+.lkbar button.ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.lkset textarea{width:100%;margin-top:8px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;border-radius:8px;border:1px solid #CBD5E1;padding:8px 10px;box-sizing:border-box}
+.lkact{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);white-space:nowrap}
 .pill i{width:7px;height:7px;border-radius:50%;background:#6EE7B7;display:inline-block}.pill.off i{background:#FCD34D}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
 .ch{display:flex;align-items:center;gap:8px;margin:0 0 8px}.ch h2{margin:0;font-size:14.5px;font-weight:600}
@@ -71,7 +77,12 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
 <body>
 <div class="wrap">
  <header class="hero"><div><h1>Cek Foto Bukti</h1><p>Baca foto bukti kontak, lalu kirim hasilnya ke tab Kontak dashboard Team C.</p></div>
-  <div class="pills"><span class="pill"><i></i>Bisa tanpa internet</span><span class="pill"><i></i>Foto tidak dikirim ke mana pun</span></div></header>
+  <div class="pills"><span class="pill"><i></i>Bisa tanpa internet</span><span class="pill"><i></i>Foto tidak dikirim ke mana pun</span></div>
+  <div class="lkbar" id="larkBar"></div></header>
+ <div class="card lkset" id="larkSet" hidden><div class="ch"><span class="num">📄</span><h2>Link sheet Customer Background (Lark)</h2></div>
+  <div class="muted">Tempel link sheet Lark. Satu link untuk semua, atau satu baris per sales: <b>Nama = link</b>. Link disimpan di browser ini dan ikut di link alat yang disalin di bawah.</div>
+  <textarea id="larkTx" rows="3" spellcheck="false" placeholder="https://xxx.larksuite.com/sheets/..."></textarea>
+  <div class="lkact"><button class="btn primary" id="larkSave" type="button">Simpan link</button><button class="btn" id="larkCopy" type="button">📋 Salin link alat ini (untuk ditaruh di sheet Lark)</button><button class="btn" id="larkClose" type="button">Tutup</button><span class="muted" id="larkMsg"></span></div></div>
 
  <div class="card" id="lock"><div class="ch"><span class="num">🔒</span><h2>Masukkan password Data TL</h2></div><form id="lockForm" autocomplete="off">
   <div class="muted">Sama dengan password Data TL di dashboard Team C. Hasil bacaan foto dikunci dengan password ini.</div>
@@ -110,7 +121,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
    <div class="row"><div id="packs" class="muted"></div><span style="flex:1"></span><button id="expAll">⬇ Simpan .tefoto</button><label class="btn">⬆ Muat .tefoto…<input type="file" id="impIn" accept=".tefoto" multiple hidden></label></div>
    <div class="muted" id="impSt"></div></section>
  </main>
- <div class="foot">Cek Foto Bukti · Team C · semua proses berjalan di laptop ini · v26.10.28-1</div>
+ <div class="foot">Cek Foto Bukti · Team C · semua proses berjalan di laptop ini · v26.10.29-3</div>
 </div>
 <script>/*@A:fflate-c3b34f2e9f5e.txt@*/</script>
 <script>/*@A:tess-a8e29918d098.txt@*/</script>
@@ -798,6 +809,23 @@ document.addEventListener("DOMContentLoaded",()=>{
  if(!FT.ok())$("#lockErr").textContent="Browser ini tidak mendukung enkripsi. Buka file ini di Google Chrome di laptop.";
  setTimeout(()=>$("#pw").focus(),50);});
 window.__tool={render:()=>renderSheets(),get SHEETS(){return SHEETS;},get KN(){return KN;},get PACKS(){return PACKS;},get RUN(){return RUN;},SESSION,hashSheet,readImage,pdRead,ensureOcr,unz,get PD(){return PD;}};
+/* ---------- link to the Lark Customer Background sheet, and a shareable link to this tool ---------- */
+(function(){const TEAMK=(/^team(\w+)_/.exec("teamC_lark")||[,"E"])[1] /* the team letter is set by the build */,LKK="ocrLark_"+TEAMK,PAGES="https://rivanworkspace.github.io/Performance-Dashboard/";
+ const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]),okUrl=u=>/^https:\/\/[^\s"<>]+$/i.test(u);
+ const parse=t=>{const out=[];String(t||"").split(/\n+/).map(x=>x.trim()).filter(Boolean).forEach(l=>{const m=/^(.+?)\s*=\s*(https:\/\/\S+)$/.exec(l);if(m&&okUrl(m[2]))out.push([m[1].trim(),m[2]]);else if(okUrl(l))out.push(["",l]);});return out;};
+ let TXT="";try{TXT=window.__OCR_LARK||"";const hm=/[#&]lk=([^&]*)/.exec(location.hash);if(hm)TXT=decodeURIComponent(hm[1]);if(TXT)localStorage.setItem(LKK,TXT);else TXT=localStorage.getItem(LKK)||"";}catch(e){}
+ const shareUrl=()=>{const base=location.protocol==="https:"?location.origin+location.pathname:PAGES+"ocr-"+TEAMK.toLowerCase()+"/";let h="#p="+encodeURIComponent(PEOPLE.join(","));if(TXT)h+="&lk="+encodeURIComponent(TXT);return base+h;};
+ function render(){const bar=document.getElementById("larkBar");if(!bar)return;const L=parse(TXT);
+  bar.innerHTML=(L.length===1&&!L[0][0]?`<a href="${esc(L[0][1])}" target="_blank" rel="noopener">📄 Buka sheet Customer Background</a>`:L.map(([n,u])=>`<a href="${esc(u)}" target="_blank" rel="noopener">📄 ${esc(n||"Sheet")}</a>`).join(""))+
+   `<button class="ghost" id="larkEdit" type="button">${L.length?"🔗 Ubah link sheet":"🔗 Tambah link sheet Lark"}</button>`;}
+ document.addEventListener("click",async e=>{const t=e.target;if(!t.closest)return;const box=document.getElementById("larkSet");
+  if(t.closest("#larkEdit")){box.hidden=!box.hidden;document.getElementById("larkTx").value=TXT;document.getElementById("larkMsg").textContent="";if(!box.hidden)document.getElementById("larkTx").focus();return;}
+  if(t.closest("#larkClose")){box.hidden=true;return;}
+  if(t.closest("#larkSave")){const v=document.getElementById("larkTx").value.trim(),L=parse(v),m=document.getElementById("larkMsg");
+   if(v&&!L.length){m.textContent="Link harus diawali https://";return;}TXT=L.map(([n,u])=>n?`${n} = ${u}`:u).join("\n");try{if(TXT)localStorage.setItem(LKK,TXT);else localStorage.removeItem(LKK);}catch(x){}render();m.textContent=TXT?"✓ Tersimpan.":"Link dihapus.";return;}
+  if(t.closest("#larkCopy")){const u=shareUrl(),m=document.getElementById("larkMsg");let ok=false;try{await navigator.clipboard.writeText(u);ok=true;}catch(x){const ta=document.createElement("textarea");ta.value=u;document.body.appendChild(ta);ta.select();try{ok=document.execCommand("copy");}catch(y){}ta.remove();}
+   m.textContent=ok?"✓ Link alat tersalin. Tempel di sheet Lark; siapa pun yang membukanya langsung dapat daftar sales dan tombol ke sheet ini.":u;return;}});
+ render();})();
 })();
 </script>
 </body>

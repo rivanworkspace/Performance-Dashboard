@@ -16,6 +16,6 @@
   got[need[j]]=w;await S.idb.put("asset:"+need[j],w);}
  S.msg("Membuka alat…");
  var out="",last=0;RE.lastIndex=0;while((m=RE.exec(app))){out+=app.slice(last,m.index)+got[m[1]];last=m.index+m[0].length;}out+=app.slice(last);
- var k=out.indexOf("<head>");if(k>=0)out=out.slice(0,k+6)+"<script>window.__OCR_REMOTE="+JSON.stringify({team:S.team,sha:S.sha,offline:!!S.offline}).replace(/</g,"\\u003c")+";window.__OCR_PEOPLE="+JSON.stringify(S.people||[]).replace(/</g,"\\u003c")+";<\/script>"+out.slice(k+6);
+ var k=out.indexOf("<head>");if(k>=0)out=out.slice(0,k+6)+"<script>window.__OCR_REMOTE="+JSON.stringify({team:S.team,sha:S.sha,offline:!!S.offline}).replace(/</g,"\\u003c")+";window.__OCR_PEOPLE="+JSON.stringify(S.people||[]).replace(/</g,"\\u003c")+";window.__OCR_LARK="+JSON.stringify(S.lark||"").replace(/</g,"\\u003c")+";<\/script>"+out.slice(k+6);
  document.open();document.write(out);document.close();
 })();
