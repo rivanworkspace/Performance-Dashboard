@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta name="app-version" content="26.10.29-5">
+<meta name="app-version" content="26.10.29-6">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cek Foto Bukti · Team C</title>
@@ -122,7 +122,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
    <div class="row"><div id="packs" class="muted"></div><span style="flex:1"></span><button id="expAll">⬇ Simpan .tefoto</button><label class="btn">⬆ Muat .tefoto…<input type="file" id="impIn" accept=".tefoto" multiple hidden></label></div>
    <div class="muted" id="impSt"></div></section>
  </main>
- <div class="foot">Cek Foto Bukti · Team C · semua proses berjalan di laptop ini · v26.10.29-5</div>
+ <div class="foot">Cek Foto Bukti · Team C · semua proses berjalan di laptop ini · v26.10.29-6</div>
 </div>
 <script>/*@A:fflate-c3b34f2e9f5e.txt@*/</script>
 <script>/*@A:tess-a8e29918d098.txt@*/</script>
@@ -217,7 +217,8 @@ const FT=(function(){
   for(const m of j.match(/[0-9A-Za-z|!]{9,}/g)||[])for(const w of m.match(/(?:[0-9][0-9A-Za-z|!]?){5,}[0-9]/g)||[]){let d=0;for(const c of w)if(c>="0"&&c<="9")d++;
    if(w.length>=9&&d>=.7*w.length&&d<w.length)out.add([...w].map(c=>c>="0"&&c<="9"?c:(CONF[c]||"?")).join(""));}
   return [...out];}
- function txOf(words){const t=words.map(w=>w[0]).join(" "),dg=t.replace(/(\d)[ \-.](?=\d)/g,"$1");const nums=[...new Set(words.flatMap(w=>String(w[0]).match(/\d{8,}/g)||[]).concat(dg.match(/\d{8,13}/g)||[]))],lw=[...new Set(t.toLowerCase().match(/[a-z]{4,}/g)||[])];return [words.length,nums.join(" "),lw.join(" "),candsOf(t).join(" "),datesOf(t),nameDates(words)];}
+ function txOf(words){const t=words.map(w=>w[0]).join(" "),dg=t.replace(/(\d)[ \-.](?=\d)/g,"$1");const nums=[...new Set(words.flatMap(w=>String(w[0]).match(/\d{8,}/g)||[]).concat(dg.match(/\d{8,13}/g)||[]))],lw=[...new Set(t.toLowerCase().match(/[a-z]{4,}/g)||[])];const aw=t.toLowerCase().split(/[^a-z]+/).filter(Boolean),pr=new Set();for(let i=0;i+1<aw.length;i++){const j=aw[i]+aw[i+1];if(j.length>=6&&j.length<=20&&(aw[i].length<4||aw[i+1].length<4))pr.add(j);}
+  return [words.length,nums.join(" "),lw.join(" "),candsOf(t).join(" "),datesOf(t),nameDates(words),[...pr].join(" ")];}
  /* dates next to a name: for every line with a date, the words on that line and on the two lines above it
     ("Budi Santoso" with "27/10/2026" below it, or a chat list row with the date at the right). Format "word,word>date date|..." */
  function nameDates(words){const ws=(words||[]).filter(w=>w&&w[0]!=null&&w.length>=5).map(w=>({t:String(w[0]),x:+w[1],y:+w[2]+(+w[4])/2,h:Math.max(1,+w[4])})).sort((a,b)=>a.y-b.y);if(!ws.length)return "";
@@ -265,12 +266,17 @@ const FT=(function(){
   let o=nums.find(v=>v!==sid&&allSids&&allSids.has(v)),ot=o;if(!o&&p9map){for(const v of nums){if(v.length<9)continue;const s=p9map.get(v.slice(-9));if(s){const c=[...s].find(q=>q!==sid);if(c){o=c;ot=v;break;}}}}
   if(o){/* same person on another account (same name): the proof is still this customer's */
    const nm=allSids&&allSids.names,on=nm&&nm.get(o);if(on&&sameName(name,on))return [1,"","n",ot];
+   /* the number is registered to another customer, but the chat is addressed to this customer by name (and not to the other one): a shared or re-used phone number */
+   if(ot!==o){const k=nameIn(t,name);if(k&&!(on&&nameIn(t,on)))return [1,o,"n",k];}
    /* no phone for this customer in Customer Background: the number may simply be the customer's second number (or another line in a call log) */
    if(!p9)return [2,o,"x",ot];
    return [4,o,"",ot];}
   /* the name counts only when no SID or phone number (of this or another customer) was found: SIDs are unique, names are not */
-  const toks=(String(name||"").toLowerCase().match(/[a-z]{4,}/g)||[]).filter(w=>!STOP.has(w));for(const k of toks){if(k.length>=5?lw.some(w=>w.includes(k)):lw.includes(k))return [1,"","n",k];}
+  {const k=nameIn(t,name);if(k)return [1,"","n",k];}
   return [t[0]<5?3:2,"","",""];}
+ /* this customer's name is written in the photo */
+ function nameIn(t,name){if(!t||!name)return "";const lw=t[2]?t[2].split(" "):[],pr=t[6]?t[6].split(" "):[],toks=(String(name).toLowerCase().match(/[a-z]{4,}/g)||[]).filter(w=>!STOP.has(w));
+  for(const k of toks){if(k.length>=5?lw.some(w=>w.includes(k)):lw.includes(k))return k;if(k.length>=6&&pr.includes(k))return k;}return "";}
  /* two customer names that clearly belong to the same person */
  function sameName(a,b){const tk=v=>(String(v||"").toLowerCase().match(/[a-z]{4,}/g)||[]).filter(w=>!STOP.has(w));const A=tk(a),B=tk(b);if(!A.length||!B.length)return false;
   const raw=v=>String(v||"").toLowerCase().replace(/[^a-z]+/g," ").trim();const ra=raw(a);if(ra.length>=6&&ra.split(" ").length>=2&&ra===raw(b))return true;
@@ -294,7 +300,7 @@ const FT=(function(){
   const x0=Math.max(0,Math.min(...ws.map(w=>w[1]))-12),y0=Math.max(0,Math.min(...ws.map(w=>w[2]))-12),x1=Math.min(W,Math.max(...ws.map(w=>w[1]+w[3]))+12),y1=Math.min(H,Math.max(...ws.map(w=>w[2]+w[4]))+12);
   const hs=ws.map(w=>w[4]).sort((a,b)=>a-b),n=hs.length,mh=(n%2?hs[(n-1)/2]:(hs[n/2-1]+hs[n/2])/2)||12;
   return {box:[Math.trunc(x0),Math.trunc(y0),Math.trunc(x1),Math.trunc(y1)],s:Math.min(1,11/mh,760/Math.max(1,x1-x0),900/Math.max(1,y1-y0)),k:"b"};}
- return {ok,isPack,meta,seal,open,reseal,store,get ch(){return ch;},txOf,codeOf,cropBox,hlBox,sameName,datesOf,tmParse,dateCheck,nameDates};
+ return {ok,isPack,meta,seal,open,reseal,store,get ch(){return ch;},txOf,codeOf,cropBox,hlBox,sameName,datesOf,tmParse,dateCheck,nameDates,nameIn};
 })();
 </script>
 <script>/*@A:cfb-c843298014fa.txt@*/
@@ -644,7 +650,7 @@ async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.n
  const sidsOf=m=>[...bySid].filter(([,mm])=>mm===m).map(([q])=>q),miss=(tx,m)=>sidsOf(m).some(q=>{const rr=s.recs.get(q);return FT.codeOf(tx,q,rr.p9,rr.name,allSids,p9map)[0]!==1;});
  let again=0;for(const m of todo){const x=hv.get(m);if(!KN.has(x.h))continue;const tx=KN.get(x.h);
   /* read before this version's better matching and not matched: read once more */
-  if((!tx[3]&&miss(tx,m))||(tx.length<5&&sidsOf(m).some(q=>(s.recs.get(q)||{}).tm))||(tx.length<6&&sidsOf(m).some(q=>{const rr=s.recs.get(q)||{};return rr.tm&&FT.dateCheck(tx,rr.tm)[0]===3;}))){again++;continue;}done.set(m,{h:x.h,sd:null,tx,known:1});}
+  if((!tx[3]&&miss(tx,m))||(tx.length<5&&sidsOf(m).some(q=>(s.recs.get(q)||{}).tm))||(tx.length<6&&sidsOf(m).some(q=>{const rr=s.recs.get(q)||{};return rr.tm&&FT.dateCheck(tx,rr.tm)[0]===3;}))||(tx.length<7&&sidsOf(m).some(q=>{const rr=s.recs.get(q);return rr&&FT.codeOf(tx,q,rr.p9,rr.name,allSids,p9map)[0]===4;}))){again++;continue;}done.set(m,{h:x.h,sd:null,tx,known:1});}
  if(again&&RUN)RUN.total+=again;
  const queue=todo.filter(m=>!done.has(m));let inflight=0,qi=0,err=0;
  await new Promise(resolve=>{const next=()=>{if(RUN.stop){if(!inflight)resolve();return;}
