@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta name="app-version" content="26.10.29-7">
+<meta name="app-version" content="26.10.29-8">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cek Foto Bukti · Team C</title>
@@ -122,7 +122,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
    <div class="row"><div id="packs" class="muted"></div><span style="flex:1"></span><button id="expAll">⬇ Simpan .tefoto</button><label class="btn">⬆ Muat .tefoto…<input type="file" id="impIn" accept=".tefoto" multiple hidden></label></div>
    <div class="muted" id="impSt"></div></section>
  </main>
- <div class="foot">Cek Foto Bukti · Team C · semua proses berjalan di laptop ini · v26.10.29-7</div>
+ <div class="foot">Cek Foto Bukti · Team C · semua proses berjalan di laptop ini · v26.10.29-8</div>
 </div>
 <script>/*@A:fflate-c3b34f2e9f5e.txt@*/</script>
 <script>/*@A:tess-a8e29918d098.txt@*/</script>
@@ -758,9 +758,9 @@ async function makeExcel(){const st=$("#xlSt"),own=$("#xlOwn").checked,mode=$("#
    st.textContent="Menyiapkan daftar…";await tick();for(const s of list)await hashSheet(s);
    const need=new Map(),CM=new Map();list.forEach(s=>{s.hashed.forEach((x,m)=>{if(!need.has(x.h))need.set(x.h,{s,m,mime:x.mime});});const cs=s.chgDone||sheetChanges(s);CM.set(s,new Map(cs.map(c=>[c.sid,c])));cs.forEach(c=>{if(c.h&&!need.has(c.h))need.set(c.h,null);});});
    const crops=new Map();if(mode==="crop"){let k=0;for(const pk of PACKS){k++;st.textContent=`Mengambil potongan foto… ${k}/${PACKS.length}`;await tick();
-     try{const r=await FT.store.get(pk.id);if(!r)continue;const o=await FT.open(new Uint8Array(r.bytes),PW);Object.entries(o.head.img||{}).forEach(([h,[off,len]])=>{if(need.has(h)&&!crops.has(h))crops.set(h,o.body.slice(o.base+off,o.base+off+len));});}catch(e){}}}
+     try{const r=await FT.store.get(pk.id);if(!r)continue;const o=await FT.open(new Uint8Array(r.bytes),PW);Object.entries(o.head.img||{}).forEach(([h,[off,len,,,kk]])=>{if(need.has(h)&&!crops.has(h))crops.set(h,[o.body.slice(o.base+off,o.base+off+len),kk==="o"]);});}catch(e){}}}
    let n=0,zc=new Map();for(const [h,src] of need){n++;if(n%10===0){st.textContent=`Menyiapkan foto ${num(n)}/${num(need.size)}…`;await tick();}
-    if(crops.has(h)){await addImg(h,new Blob([crops.get(h)],{type:"image/webp"}),520);if(media.has(h))KIND.set(h,"c");}
+    if(crops.has(h)){const [cb,og]=crops.get(h);await addImg(h,new Blob([cb],og?{}:{type:"image/webp"}),og?640:520);if(media.has(h))KIND.set(h,og?"f":"c");}
     if(!media.has(h)&&src){let z=zc.get(src.s);if(!z){zc.clear();z=unz(src.s.F,nm=>src.s.hashed.has(nm));zc.set(src.s,z);}if(z[src.m])await addImg(h,new Blob([z[src.m]],{type:src.mime}),mode==="crop"?640:900);}}
    zc.clear();crops.clear();
    for(const s of list){const pn=s.who,allSids=new Set(),p9map=new Map();allSids.names=new Map();SHEETS.filter(o=>o.who===pn).forEach(o=>o.recs.forEach((r,sid)=>{allSids.add(sid);if(r.name)allSids.names.set(sid,r.name);if(r.p9){let a=p9map.get(r.p9);if(!a)p9map.set(r.p9,a=new Set());a.add(sid);}}));
