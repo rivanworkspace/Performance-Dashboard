@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Performance Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F4F5FB;--card:#FFFFFF;--line:#E3E6F0;--text:#111827;--muted:#5B6478;--accent:#5B4BE8;--accent2:#7C3AED;--soft:#EEF0FF}
+@media (prefers-color-scheme:dark){:root{--bg:#0F1424;--card:#161D31;--line:#2A3350;--text:#F3F5FB;--muted:#9AA3BA;--accent:#7C6CFF;--accent2:#9F7AEA;--soft:#1E2642}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 Poppins,system-ui,-apple-system,"Segoe UI",sans-serif}
+.w{max-width:880px;margin:0 auto;padding:40px 16px 56px}
+h1{font-size:28px;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 28px}
+h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:28px 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+a.c{display:flex;gap:14px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;text-decoration:none;color:inherit;transition:transform .12s,border-color .12s,box-shadow .12s}
+a.c:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 8px 24px rgba(91,75,232,.14)}
+.ic{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:21px;background:var(--soft)}
+a.c.main .ic{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.t{font-weight:600;font-size:16px}
+.d{color:var(--muted);font-size:13px;margin-top:2px}
+.note{margin-top:28px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;color:var(--muted);font-size:13.5px}
+.note b{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="w">
+ <h1>Performance Dashboard</h1>
+ <p class="sub">Pilih halaman yang mau dibuka. Simpan halaman ini sebagai bookmark.</p>
+
+ <h2>Dashboard</h2>
+ <div class="grid">
+  <a class="c main" href="e/"><span class="ic">📊</span><span><span class="t">Dashboard Tim E</span><span class="d" style="display:block">Bonus Progress, Kontak, Rekap Contacted</span></span></a>
+  <a class="c main" href="c/"><span class="ic">📊</span><span><span class="t">Dashboard Tim C</span><span class="d" style="display:block">Bonus Progress, Kontak, Rekap Contacted</span></span></a>
+ </div>
+
+ <h2>Alat</h2>
+ <div class="grid">
+  <a class="c" href="ocr-e/"><span class="ic">🔎</span><span><span class="t">Cek Foto Bukti Tim E</span><span class="d" style="display:block">Baca foto bukti kontak dari file Customer Background</span></span></a>
+  <a class="c" href="ocr-c/"><span class="ic">🔎</span><span><span class="t">Cek Foto Bukti Tim C</span><span class="d" style="display:block">Baca foto bukti kontak dari file Customer Background</span></span></a>
+  <a class="c" href="fu/"><span class="ic">✅</span><span><span class="t">FU &amp; Tugas Tim E</span><span class="d" style="display:block">Pengingat follow up dan catatan TL</span></span></a>
+ </div>
+
+ <div class="note"><b>Tips:</b> buka Cek Foto Bukti dari dashboard (tab <b>Kontak</b> → <b>🔎 Buka Cek Foto Bukti</b>) supaya daftar sales langsung terisi dan hasilnya masuk ke dashboard di Chrome yang sama.</div>
+</div>
+</body>
+</html>
