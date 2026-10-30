@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta name="app-version" content="26.10.30-3">
+<meta name="app-version" content="26.10.30-4">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cek Foto Bukti · Team E</title>
@@ -122,7 +122,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
    <div class="row"><div id="packs" class="muted"></div><span style="flex:1"></span><button id="expAll">⬇ Simpan .tefoto</button><label class="btn">⬆ Muat .tefoto…<input type="file" id="impIn" accept=".tefoto" multiple hidden></label></div>
    <div class="muted" id="impSt"></div></section>
  </main>
- <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.30-3</div>
+ <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.30-4</div>
 </div>
 <script>/*@A:fflate-c3b34f2e9f5e.txt@*/</script>
 <script>/*@A:tess-a8e29918d098.txt@*/</script>
@@ -419,7 +419,10 @@ const KN=new Map();           /* hash -> tx facts, for photos already read and s
 const HLM=new Map(),KK=new Map();   /* KK: hash -> 'o' when the stored proof photo is the original */
 /* which photo to keep: the original for photos with a problem (or always / never, as chosen) */
 const useOrig=bad=>KEEP()==='orig'||(KEEP()==='auto'&&bad);
-const isBad=(rows,chgS)=>rows.some(r=>r[3]!==1||r[7]===3||(chgS&&chgS.has(r[0])));          /* sid|hash -> [box in crop, box in full photo, matched text] */
+const isBad=(rows,chgS,s,ym)=>rows.some(r=>{if(r[3]!==1||r[7]===3||(chgS&&chgS.has(r[0])))return true;
+  /* Contacted Time: empty while contacted, filled while uncontacted, or not in this month (the dashboard marks these "Tanggal kontak janggal") */
+  const rr=s&&s.recs.get(r[0]);if(!rr||!s.cols||!(s.cols.tm>=0))return false;const fl=decF(rr.f),ct=!!(fl&&(fl.ct===1||(fl.ct===2&&(fl.pc===1||fl.wa===1||fl.cr===1)))),tm=rr.tm||"";
+  return ct?(!tm||tm.slice(0,7)!==ym):!!tm;});          /* sid|hash -> [box in crop, box in full photo, matched text] */
 let PACKS=[];                 /* metas of packs in this browser */
 const FILES=[];               /* {file,u8,ss,sheets:[{name,path,...}]} */
 let SHEETS=[];                /* candidate sheets */
@@ -673,7 +676,7 @@ async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.n
      if(out)done.set(m,out);RUN.done++;inflight--;
      /* rows of this photo */
      if(out){const rs=[];bySid.forEach((mm,sd_)=>{if(mm!==m)return;const rr=s.recs.get(sd_),[code,oth,ev,tok]=FT.codeOf(out.tx,sd_,rr.p9,rr.name,allSids,p9map),hl=code===1||code===4?FT.hlBox(out.words,tok,ev,out.box):null,hlF=code===1||code===4?FT.hlBox(out.words,tok,ev,[0,0,out.W,out.H]):null,[dc,dd]=FT.dateCheck(out.tx,rr.tm,rr.name);rs.push([sd_,out.h,out.sd,code,oth,ev,hl,dc,dd,hlF,tok||""]);});
-      const og=useOrig(isBad(rs,CHGS));chunk.imgs.push(og?{h:x.h,u8:new Uint8Array(z[m]),w:out.W,ht:out.H,k:"o"}:{h:x.h,u8:out.cr.u8,w:out.cr.w,ht:out.cr.ht,k:out.cr.k});KK.set(x.h,og?"o":"c");
+      const og=useOrig(isBad(rs,CHGS,s,ym));chunk.imgs.push(og?{h:x.h,u8:new Uint8Array(z[m]),w:out.W,ht:out.H,k:"o"}:{h:x.h,u8:out.cr.u8,w:out.cr.w,ht:out.cr.ht,k:out.cr.k});KK.set(x.h,og?"o":"c");
       rs.forEach(row=>{const [sd_,,,code,oth,,hl,dc,dd,hlF,tok]=row,rr=s.recs.get(sd_);if(og)row[6]=hlF;chunk.rows.push(row);if(hl||hlF)HLM.set(sd_+"|"+out.h,[hl,hlF,tok||""]);sum.n++;sum.c[code]++;dtSum(sum,dc,dd,sd_,rr,out.h,ym,out.cu8);if(code===4){if(!CROPU.has(out.h))CROPU.set(out.h,URL.createObjectURL(new Blob([out.cu8],{type:"image/webp"})));sum.flag.push([sd_,rr.name,code,out.h,oth,hl]);}});}
      const pc=RUN.total?RUN.done/RUN.total*100:100;$("#bar").style.width=pc.toFixed(1)+"%";$("#pgN").textContent=`${num(RUN.done)} / ${num(RUN.total)} foto`;$("#pgEta").textContent=RUN.paused?"dijeda":eta();st.textContent=`Sedang membaca: ${pn} · ${ml(ym)}${RUN.pd?` · ${num(RUN.pd)} foto dibaca ulang dengan pembaca kedua`:""}${err?` · ${err} foto gagal dibaca`:""}${PDOFF?" · pembaca kedua tidak bisa dipakai di browser ini":""}`;
      if(chunk.imgs.length>=120)await flush(false);
@@ -682,7 +685,7 @@ async function runSheet(s,nw){const pn=s.who,ym=s.ym,st=$("#runSt"),RUNAT=Date.n
    if(qi>=queue.length&&!inflight)resolve();};next();});
  /* photos read earlier: store the original again when it is wanted (always, or for a photo with a problem) and not stored yet */
  {const km=new Set();for(const [m,o] of done){if(!o.known||km.has(m)||!z[m]||KK.get(o.h)==="o")continue;km.add(m);
-   const rs=sidsOf(m).map(q=>{const rr=s.recs.get(q);return [q,o.h,null,FT.codeOf(o.tx,q,rr.p9,rr.name,allSids,p9map)[0],"","",null,FT.dateCheck(o.tx,rr.tm,rr.name)[0]];});if(!useOrig(isBad(rs,CHGS)))continue;
+   const rs=sidsOf(m).map(q=>{const rr=s.recs.get(q);return [q,o.h,null,FT.codeOf(o.tx,q,rr.p9,rr.name,allSids,p9map)[0],"","",null,FT.dateCheck(o.tx,rr.tm,rr.name)[0]];});if(!useOrig(isBad(rs,CHGS,s,ym)))continue;
    let W=0,H=0;try{const bm=await createImageBitmap(new Blob([z[m]]));W=bm.width;H=bm.height;bm.close&&bm.close();}catch(e){}
    chunk.imgs.push({h:o.h,u8:new Uint8Array(z[m]),w:W,ht:H,k:"o"});KK.set(o.h,"o");if(chunk.imgs.length>=60)await flush(false);}}
  /* rows whose photo was already known */
