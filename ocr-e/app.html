@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta name="app-version" content="26.10.29-8">
+<meta name="app-version" content="26.10.30-1">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Cek Foto Bukti · Team E</title>
@@ -122,7 +122,7 @@ ul.tips{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:4px}ul.tips l
    <div class="row"><div id="packs" class="muted"></div><span style="flex:1"></span><button id="expAll">⬇ Simpan .tefoto</button><label class="btn">⬆ Muat .tefoto…<input type="file" id="impIn" accept=".tefoto" multiple hidden></label></div>
    <div class="muted" id="impSt"></div></section>
  </main>
- <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.29-8</div>
+ <div class="foot">Cek Foto Bukti · Team E · semua proses berjalan di laptop ini · v26.10.30-1</div>
 </div>
 <script>/*@A:fflate-c3b34f2e9f5e.txt@*/</script>
 <script>/*@A:tess-a8e29918d098.txt@*/</script>
@@ -234,7 +234,9 @@ const FT=(function(){
  function datesOf(t){const s=String(t).replace(/\s+/g," "),out=new Set();let m;
   const r1=/(^|[^\d.:])(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4}|\d{2})(?![\d.:])/g;while((m=r1.exec(s))){let a=+m[2],b=+m[3],y=+m[4];if(m[4].length===2){if(y<24||y>29)continue;y+=2000;}if(y<2023||y>2030)continue;if(okD(y,b,a))out.add(`${y}-${pad(b)}-${pad(a)}`);if(a<=12&&b>12&&okD(y,a,b))out.add(`${y}-${pad(a)}-${pad(b)}`);}
   const r2=/(^|[^\d])(20\d\d)[\/\-.](\d{1,2})[\/\-.](\d{1,2})(?!\d)/g;while((m=r2.exec(s))){if(okD(+m[2],+m[3],+m[4]))out.add(`${m[2]}-${pad(m[3])}-${pad(m[4])}`);}
-  const r3=/(^|[^\d\/.:\-])(\d{1,2})-(\d{1,2}) \d{1,2}:\d{2}(?!\d)/g;while((m=r3.exec(s))){if(okD(2024,+m[2],+m[3]))out.add(`----${pad(m[2])}-${pad(m[3])}`);}
+  const r3=/(^|[^\d\/.:\-])(\d{1,2})-(\d{1,2}) \d{1,2}:\d{2}(?!\d)/g;while((m=r3.exec(s))){if(okD(2024,+m[2],+m[3]))out.add(`----${pad(m[2])}-${pad(m[3])}`);
+   /* the reader often drops the leading 1 of a two-digit month ("1-27 18:55" for 11-27): keep 10-12 as an option too */
+   if(m[2].length===1&&+m[2]<=2&&okD(2024,10+(+m[2]),+m[3]))out.add(`----${pad(10+(+m[2]))}-${pad(m[3])}`);}
   const MW="(jan|feb|mar|apr|mei|may|jun|jul|agu|agt|aug|sep|okt|oct|nov|des|dec|dis)[a-z]*\\.?";
   const r4=new RegExp("(^|[^\\d])(\\d{1,2}) ?"+MW+",? ?(\\d{4})?(?!\\d)","gi");while((m=r4.exec(s))){const mo=MON[m[3].toLowerCase()],y=m[4]&&+m[4]>=2023&&+m[4]<=2030?+m[4]:0;if(okD(y||2024,mo,+m[2]))out.add(y?`${y}-${pad(mo)}-${pad(m[2])}`:`----${pad(mo)}-${pad(m[2])}`);}
   const r5=new RegExp(MW+" (\\d{1,2}),? ?(\\d{4})?(?!\\d)","gi");while((m=r5.exec(s))){const mo=MON[m[1].toLowerCase()],y=m[3]&&+m[3]>=2023&&+m[3]<=2030?+m[3]:0;if(okD(y||2024,mo,+m[2]))out.add(y?`${y}-${pad(mo)}-${pad(m[2])}`:`----${pad(mo)}-${pad(m[2])}`);}
@@ -248,8 +250,11 @@ const FT=(function(){
  const dn=s=>Date.UTC(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10))/864e5;
  /* [code, photo date]: 0 no Contacted Time, -1 photo read before dates were read, 1 same day, 2 one day apart, 3 different, 4 no date in the photo */
  function dateCheck(t,tm,name){if(!tm)return [0,""];if(!t||t.length<5)return [-1,""];let ds=String(t[4]||"").split(" ").filter(x=>x&&x!=="~");
-  /* the date written next to (below / beside) this customer's name has priority over other dates in the photo */
-  if(name&&t[5]){const nt=(String(name).toLowerCase().match(/[a-z]{4,}/g)||[]).filter(w=>!STOP.has(w));if(nt.length){const hit=[];String(t[5]).split("|").forEach(e=>{const [a,b]=e.split(">");const ws=(a||"").split(",");if(nt.some(k=>k.length>=5?ws.some(w=>w.includes(k)):ws.includes(k)))(b||"").split(" ").filter(Boolean).forEach(x=>hit.push(x));});if(hit.length)ds=[...new Set(hit)];}}if(!ds.length)return [4,String(t[4]||"").includes("~")?"~":""];
+  /* chat bubble times ("10-30 09:56" under each message) come first: a date in the header next to the profile (login / app info) is not the contact date */
+  const bub=ds.filter(x=>x.startsWith("----"));
+  if(bub.length)ds=bub;
+  /* otherwise the date written next to (below / beside) this customer's name has priority over other dates in the photo */
+  else if(name&&t[5]){const nt=(String(name).toLowerCase().match(/[a-z]{4,}/g)||[]).filter(w=>!STOP.has(w));if(nt.length){const hit=[];String(t[5]).split("|").forEach(e=>{const [a,b]=e.split(">");const ws=(a||"").split(",");if(nt.some(k=>k.length>=5?ws.some(w=>w.includes(k)):ws.includes(k)))(b||"").split(" ").filter(Boolean).forEach(x=>hit.push(x));});if(hit.length)ds=[...new Set(hit)];}}if(!ds.length)return [4,String(t[4]||"").includes("~")?"~":""];
   const c=dn(tm),cy=+tm.slice(0,4);let best=null;
   for(const x of ds){const ys=x.startsWith("----")?[cy,cy-1,cy+1]:[+x.slice(0,4)];for(const y of ys){const v=`${y}-${x.slice(-5)}`;if(!okD(y,+v.slice(5,7),+v.slice(8,10)))continue;const k=Math.abs(dn(v)-c);if(!best||k<best[0])best=[k,v];}}
   if(!best)return [4,""];return [best[0]===0?1:best[0]===1?2:3,best[1]];}
